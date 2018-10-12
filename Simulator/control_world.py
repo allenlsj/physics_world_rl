@@ -29,6 +29,150 @@ TIME_STEP = 1.0 / TARGET_FPS
 WIDTH, HEIGHT = 6, 4
 BALL_RADIUS = 0.25
 BORDER = 0.20
+SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
+
+#--- Set functions ---
+def gaussian(s, d, Sigma, eta=10):
+    diff = np.subtract(s,d)
+    #print "***************Difference***********"
+    #print diff
+    return np.exp(-eta/2 * np.dot(np.dot(diff.T, np.linalg.inv(Sigma)), diff))
+
+def inner_expectation(true_dict, est_dict_ls, Sigma):
+    if not isinstance(est_dict_ls, list):
+        raise TypeError("Input est_dict_ls must be a list of dictionary object. Your input object is a {}"
+                        .format(type(est_dict_ls)))
+    if len(true_dict.values()) != 1:
+        raise ValueError("For each timestamp, the true trajectory dictionary is fixed. Check the dimension first!")
+    
+    s_obj = true_dict.values()[0]
+    gaussian_ls = []
+    for est_dict in est_dict_ls:
+        for obj in est_dict:
+            r = est_dict[obj]['r']
+            theta =  est_dict[obj]['rotation']
+            d = (r, theta)
+            r_s = s_obj[obj]['r']
+            theta_s = s_obj[obj]['rotation']
+            s = (r_s, theta_s)
+            gaussian_ls.append(gaussian(s, d, Sigma))         
+    return np.mean(gaussian_ls)
+
+def outer_expectation(true_dict, est_dict, Sigma, out_type):
+    if out_type == 'mass':
+        inner_e = []
+        dict_ls = [i[0] for i in est_dict.keys()]
+        for i in set(dict_ls):
+            inner_force = []
+            for j in est_dict:
+                if i == j[0]:
+                    inner_force.append(est_dict[j])
+            inner_e.append(inner_expectation(true_dict, inner_force, Sigma))
+        return np.mean(inner_e)
+    
+    elif out_type == 'force':
+        inner_e = []
+        dict_ls = [i[1] for i in est_dict.keys()]
+        for i in set(dict_ls):
+            inner_mass = []
+            for j in est_dict:
+                if i == j[1]:
+                    inner_mass.append(est_dict[j])
+            inner_e.append(inner_expectation(true_dict, inner_mass, Sigma))        
+        return np.mean(inner_e)
+    
+    else:
+        raise ValueError("Cannot recognize input out_type value. Currently only support computing predictive \
+                         divergence of 'mass' and 'force'")
+        
+def get_reward(true_ls_dict, est_ls_dict, Sigma=SIGMA):
+    rewards = []
+    for i in range(len(est_ls_dict)):
+        pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "mass")
+        pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
+        rewards.append((pd_mass+pd_force)/2)
+    return 1-np.mean(rewards)
+
+def generate_bodies(cond,bodies):
+    for i in range(0, len(cond['sls'])):
+        #Give each a unique name
+        objname = 'o' + str(i + 1)
+        #Create the body
+        b = world.CreateDynamicBody(position=(cond['sls'][i]['x'], cond['sls'][i]['y']),
+                                    linearDamping = 0.05, fixedRotation=True,
+                                    userData = {'name': objname, 'bodyType': 'dynamic'})
+        b.linearVelocity = vec2(cond['svs'][i]['x'], cond['svs'][i]['y'])
+        #Add the the shape 'fixture'
+        #circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+        #                            density=cond['mass'][i],
+        #                            friction=0.05, restitution=0.98)
+        b.mass = cond['mass'][i]
+        #Add it to our list of dynamic objects
+        bodies.append(b)
+
+    return bodies
+
+def generate_state(bodies,_data):
+    #Loop over the dynamic objects
+    for i in range(0,len(bodies)):
+        #Grab and print current object name and location
+        objname = bodies[i].userData['name']
+        # print (objname, bodies[i].position)
+
+        #Apply local forces
+        for j in range(0, len(bodies)):
+            
+            #NB: The force strengths should be symmetric i,j==j,i for normal physics
+            #otherwise you'll get "chasing" behaviour
+            strength = cond['lf'][i][j]
+            #If there's a pairwise interaction between these two objects...
+            if strength!=0 and i!=j:
+                #Calculate its force based on the objects masses and distances
+                m = bodies[i].mass * bodies[j].mass
+                d = ((bodies[i].position[0] - bodies[j].position[0])**2 +
+                     (bodies[i].position[1] - bodies[j].position[1])**2)**0.5
+
+                angle = np.arctan2(bodies[i].position[1] - bodies[j].position[1],
+                             bodies[i].position[0] - bodies[j].position[0])
+                f_mag = (strength * m) / d**2
+                f_vec = (f_mag * np.cos(angle), f_mag * np.sin(angle))
+                #Print the calculated values
+                # if i==0:
+                #     print (i,j, 'force', strength, m, d,
+                #            'rounded distance y', round(bodies[i].position[1] - bodies[j].position[1], 3),
+                #            'rounded distance x', round(bodies[i].position[0] - bodies[j].position[0], 3),
+                #            'angle', angle, f_mag, f_vec)
+                
+                #Apply the force to the object
+                bodies[j].ApplyForce(force=f_vec, point=(0,0), wake=True)
+
+        if control_vec['obj'][t]==(i+1):
+            bodies[i].linearDamping = 10
+
+            c_vec = ( (1/0.19634954631328583) * 0.2*(control_vec['x'][t] - bodies[i].position[0]), 
+                     (1/0.19634954631328583) * 0.2*(control_vec['y'][t] - bodies[i].position[1]))
+            #Print the calculated values
+            print (t, i, 'control force', bodies[i].position[0], bodies[i].position[1], bodies[i].angle, c_vec)
+
+            #Apply the force to the object
+            bodies[i].ApplyLinearImpulse(impulse=c_vec, point=(0,0), wake=True)
+            if t!=(len(control_vec['obj'])-1):
+                if control_vec['obj'][t+1]==0:
+                    bodies[i].linearDamping = 0.05
+
+        #Store the position and velocity of object i
+        _data[objname]['x'].append(bodies[i].position[0])
+        _data[objname]['y'].append(bodies[i].position[1])
+        _data[objname]['vx'].append(bodies[i].linearVelocity[0])
+        _data[objname]['vy'].append(bodies[i].linearVelocity[1])
+        _data[objname]['rotation'].append(bodies[i].angle)
+
+        bodies[i].angularVelocity = 0 #Turned off all rotation but could include if we want
+        bodies[i].angle = 0
+        return _data
+
+
+
 
 # --- SET STARTING CONDITIONS --- 
 # sls = starting locations, svs = starting velocities, lf = local forces, mass = object densities
@@ -39,7 +183,8 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
               [0, 0, 0, -3],
               [-3, 0, -3, 0]],
         'mass':[1,2,1,1],
-        'timeout': 240
+        #'timeout': 240
+        'timeout': 21
     }
 # cond = {'sls':[{'x':1., 'y':1.1}, {'x':2.0, 'y':1.0}, {'x':1.0, 'y':3.0}, {'x':2.0, 'y':3.0}],
 #     'svs':[{'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}],
@@ -60,6 +205,9 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
 #     'mass':[1.0,1.0,1.0,1.0],
 #     'timeout': 240
 # } 
+
+
+
 
 # --- pybox2d world setup ---
 
@@ -91,6 +239,7 @@ for i in range(0, len(cond['sls'])):
 data['co'] = [] #Add an entry for controlled object's ID (0 none, 1-4 are objects 'o1'--'o4')
 data['mouse'] = {'x':[], 'y':[]} #Add an entry for the mouse position
 
+
 # --- add static walls ---
 w = world.CreateStaticBody(position=(WIDTH/2, 0),  shapes=polygonShape(box=(WIDTH/2, BORDER)), 
                            userData = {'name':'top_wall', 'bodyType':'static'})
@@ -113,6 +262,34 @@ walls.append(w)
 control_vec = {'obj': np.append(np.repeat(0, 60), np.repeat(1, 180)), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
 # control_vec = {'obj': np.repeat(0, 240), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
 
+mass_list = [[1,1,1,1], [1,2,1,1], [2,1,1,1]]
+def f(n,x):
+    a=[0,1,2,3,4,5,6,7,8,9,'A','b','C','D','E','F']
+    b=[]
+    while True:
+        s=n//x
+        y=n%x
+        b=b+[y]
+        if s==0:
+            break
+        n=s
+    b.reverse()
+    return b
+force_possible =[]
+for i in range(3**6):
+    force_possible.append([0]*(6-len(f(i,3)))+f(i,3))
+force_list = []
+for num in force_possible:
+    num = np.array(num)
+    force = np.zeros([4,4])
+    force[1,0] = (num[0]-1)*3
+    force[2,:2] = (num[1:3]-1)*3
+    force[3,:3] = (num[3:]-1)*3
+    force = force+force.T
+    force_list.append(force)
+
+simulate_state_dic_list = None
+true_state_dic_list = None
 # --- Run the main game loop ---
 for t in range(0,cond['timeout']):
 
@@ -131,6 +308,60 @@ for t in range(0,cond['timeout']):
     world.Step(TIME_STEP, 3, 3)
     #Remove any forces applied at the previous timepoint (these will be recalculated and reapplied below)
     world.ClearForces()
+
+    cond0 = cond.copy()
+    bodies0 = bodies[:]
+    data0 = data.copy()
+    if(t%10 == 0):
+        if(simulate_state_dic_list):
+            diff_state = []
+            true_diff_state = []
+            for time in range(1,10):
+                diff_state_dic = {}
+                true_diff_state_dic = {}
+                for key in simulate_state_dic_list[0]:
+                    diff_obj_dic = {}
+                    for obj in ['o1','o2','o3','o4']:
+                        diff_r_theta = {}
+                        current_state = simulate_state_dic_list[time][key][obj]
+                        old_state = simulate_state_dic_list[time-1][key][obj]
+                        diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
+                        diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
+                        diff_obj_dic[obj] = diff_r_theta
+                    diff_state_dic[key] = diff_obj_dic
+                diff_state.append(diff_state_dic)
+                for key in true_state_dic_list[0]:
+                    true_diff_obj_dic = {}
+                    for obj in ['o1','o2','o3','o4']:
+                        true_diff_r_theta = {}
+                        current_state = true_state_dic_list[time][key][obj]
+                        old_state = true_state_dic_list[time-1][key][obj]
+                        true_diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
+                        true_diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
+                        true_diff_obj_dic[obj] = true_diff_r_theta
+                    true_diff_state_dic[key] = true_diff_obj_dic
+                true_diff_state.append(true_diff_state_dic)
+            
+            print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
+        simulate_state_dic_list = []
+        true_state_dic_list = []
+            
+    simulate_state_dic = {}
+    true_state_dic = {}
+    for m in mass_list:
+        for f in force_list:
+            cond['mass'] = m
+            cond['lf'] = f
+            bodies = []
+            bodies = generate_bodies(cond,bodies)
+            simulate_state_dic[(tuple(m),tuple(np.array(f).flatten()))] = generate_state(bodies,data)
+            data = data0.copy()
+    simulate_state_dic_list.append(simulate_state_dic)
+
+
+    cond = cond0
+    bodies = bodies0
+    data = data0
 
     #Loop over the dynamic objects
     for i in range(0,len(bodies)):
@@ -194,8 +425,8 @@ for t in range(0,cond['timeout']):
     data['co'].append(control_vec['obj'][t])
     data['mouse']['x'].append(control_vec['x'][t])
     data['mouse']['y'].append(control_vec['y'][t])
-
-
+    true_state_dic[(tuple(cond['mass']),tuple(np.array(cond['lf']).flatten()))] = data
+    true_state_dic_list.append(true_state_dic)
 
  
 #########################
@@ -290,6 +521,7 @@ def make_frame(t):
         ball = gz.circle(r=RAD, fill=(color[0], color[1], color[2], 0.3)).translate(xy)
         ball.draw(surface)
         #Draw an orientation marker
+        # import ipdb;ipdb.set_trace()
         # xym = (xy[0]+RAD*np.cos(js_data['physics'][center]['rotation'][frame]),
         #        xy[1]+RAD*np.sin(js_data['physics'][center]['rotation'][frame]))
         # marker = gz.circle(r=RAD/5, fill=(0,0,0, .5)).translate(xym)

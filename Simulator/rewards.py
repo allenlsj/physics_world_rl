@@ -2,7 +2,7 @@ import numpy as np
 
 def gaussian(s, d, Sigma, eta=10):
     diff = np.subtract(s,d)
-    return np.exp(-eta/2 * np.dot(np.dot(diff.T, Sigma), diff))
+    return np.exp(-eta/2 * np.dot(np.dot(diff.T, np.linalg.inv(Sigma)), diff))
 
 def inner_expectation(true_dict, est_dict_ls, Sigma):
     if not isinstance(est_dict_ls, list):
