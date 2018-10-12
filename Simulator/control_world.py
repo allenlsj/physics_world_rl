@@ -112,7 +112,7 @@ def generate_bodies(cond,bodies):
 
     return bodies
 
-def generate_state(bodies,_data):
+def generate_state(bodies,local_data):
     #Loop over the dynamic objects
     for i in range(0,len(bodies)):
         #Grab and print current object name and location
@@ -161,15 +161,15 @@ def generate_state(bodies,_data):
                     bodies[i].linearDamping = 0.05
 
         #Store the position and velocity of object i
-        _data[objname]['x'].append(bodies[i].position[0])
-        _data[objname]['y'].append(bodies[i].position[1])
-        _data[objname]['vx'].append(bodies[i].linearVelocity[0])
-        _data[objname]['vy'].append(bodies[i].linearVelocity[1])
-        _data[objname]['rotation'].append(bodies[i].angle)
+        local_data[objname]['x'].append(bodies[i].position[0])
+        local_data[objname]['y'].append(bodies[i].position[1])
+        local_data[objname]['vx'].append(bodies[i].linearVelocity[0])
+        local_data[objname]['vy'].append(bodies[i].linearVelocity[1])
+        local_data[objname]['rotation'].append(bodies[i].angle)
 
         bodies[i].angularVelocity = 0 #Turned off all rotation but could include if we want
         bodies[i].angle = 0
-        return _data
+        return local_data
 
 
 
@@ -319,17 +319,6 @@ for t in range(0,cond['timeout']):
             for time in range(1,10):
                 diff_state_dic = {}
                 true_diff_state_dic = {}
-                for key in simulate_state_dic_list[0]:
-                    diff_obj_dic = {}
-                    for obj in ['o1','o2','o3','o4']:
-                        diff_r_theta = {}
-                        current_state = simulate_state_dic_list[time][key][obj]
-                        old_state = simulate_state_dic_list[time-1][key][obj]
-                        diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
-                        diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
-                        diff_obj_dic[obj] = diff_r_theta
-                    diff_state_dic[key] = diff_obj_dic
-                diff_state.append(diff_state_dic)
                 for key in true_state_dic_list[0]:
                     true_diff_obj_dic = {}
                     for obj in ['o1','o2','o3','o4']:
@@ -338,18 +327,28 @@ for t in range(0,cond['timeout']):
                         old_state = true_state_dic_list[time-1][key][obj]
                         true_diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
                         true_diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
-                        print '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
+                        #print '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
                         #print true_diff_r_theta['r']
                         #print current_state['x']
-                        print old_state['x']
+                        #print old_state['x']
                         true_diff_obj_dic[obj] = true_diff_r_theta
                     true_diff_state_dic[key] = true_diff_obj_dic
                 true_diff_state.append(true_diff_state_dic)
+                for key in simulate_state_dic_list[0]:
+                    diff_obj_dic = {}
+                    for obj in ['o1','o2','o3','o4']:
+                        diff_r_theta = {}
+                        current_state = simulate_state_dic_list[time][key][obj]
+                        diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
+                        diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
+                        diff_obj_dic[obj] = diff_r_theta
+                    diff_state_dic[key] = diff_obj_dic
+                diff_state.append(diff_state_dic)
+                
             
             print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
         simulate_state_dic_list = []
         true_state_dic_list = []
-            
     simulate_state_dic = {}
     true_state_dic = {}
     for m in mass_list:
@@ -361,7 +360,6 @@ for t in range(0,cond['timeout']):
             simulate_state_dic[(tuple(m),tuple(np.array(f).flatten()))] = generate_state(bodies,data)
             data = copy.deepcopy(data0)
     simulate_state_dic_list.append(simulate_state_dic)
-
 
     cond = cond0
     bodies = bodies0
@@ -423,13 +421,13 @@ for t in range(0,cond['timeout']):
 
         bodies[i].angularVelocity = 0 #Turned off all rotation but could include if we want
         bodies[i].angle = 0
-
     #Store the target of the controller (i.e. is one of the objects selected?)
     #And the current position of the controller (i.e. mouse)
     data['co'].append(control_vec['obj'][t])
     data['mouse']['x'].append(control_vec['x'][t])
     data['mouse']['y'].append(control_vec['y'][t])
-    true_state_dic[(tuple(cond['mass']),tuple(np.array(cond['lf']).flatten()))] = data
+    true_state_dic[(tuple(cond['mass']),tuple(np.array(cond['lf']).flatten()))] = copy.deepcopy(data)
+    #import ipdb;ipdb.set_trace()
     true_state_dic_list.append(true_state_dic)
 
  
