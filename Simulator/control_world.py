@@ -16,7 +16,7 @@ import moviepy.editor as mpy
 from os import listdir
 import matplotlib
 import matplotlib.pyplot as plt
-
+import copy
 #For js implementation
 import pyduktape
 
@@ -234,7 +234,7 @@ for i in range(0, len(cond['sls'])):
     #Add it to our list of dynamic objects
     bodies.append(b)
     #Add a named entry in the data for this object
-    data[objname] = {'x':[], 'y':[], 'vx':[], 'vy':[], 'rotation':[]};
+    data[objname] = {'x':[], 'y':[], 'vx':[], 'vy':[], 'rotation':[]}
 
 data['co'] = [] #Add an entry for controlled object's ID (0 none, 1-4 are objects 'o1'--'o4')
 data['mouse'] = {'x':[], 'y':[]} #Add an entry for the mouse position
@@ -309,9 +309,9 @@ for t in range(0,cond['timeout']):
     #Remove any forces applied at the previous timepoint (these will be recalculated and reapplied below)
     world.ClearForces()
 
-    cond0 = cond.copy()
+    cond0 = copy.deepcopy(cond)
     bodies0 = bodies[:]
-    data0 = data.copy()
+    data0 = copy.deepcopy(data)
     if(t%10 == 0):
         if(simulate_state_dic_list):
             diff_state = []
@@ -338,6 +338,10 @@ for t in range(0,cond['timeout']):
                         old_state = true_state_dic_list[time-1][key][obj]
                         true_diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
                         true_diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
+                        print '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
+                        #print true_diff_r_theta['r']
+                        #print current_state['x']
+                        print old_state['x']
                         true_diff_obj_dic[obj] = true_diff_r_theta
                     true_diff_state_dic[key] = true_diff_obj_dic
                 true_diff_state.append(true_diff_state_dic)
@@ -355,7 +359,7 @@ for t in range(0,cond['timeout']):
             bodies = []
             bodies = generate_bodies(cond,bodies)
             simulate_state_dic[(tuple(m),tuple(np.array(f).flatten()))] = generate_state(bodies,data)
-            data = data0.copy()
+            data = copy.deepcopy(data0)
     simulate_state_dic_list.append(simulate_state_dic)
 
 
