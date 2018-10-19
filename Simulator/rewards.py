@@ -51,10 +51,20 @@ def outer_expectation(true_dict, est_dict, Sigma, out_type):
         raise ValueError("Cannot recognize input out_type value. Currently only support computing predictive \
                          divergence of 'mass' and 'force'")
         
-def get_reward(true_ls_dict, est_ls_dict, Sigma):
-    rewards = []
-    for i in range(len(est_ls_dict)):
-        pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "mass")
-        pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
-        rewards.append((pd_mass+pd_force)/2)
-    return 1-np.mean(rewards)
+def get_reward(true_ls_dict, est_ls_dict, Sigma, mod=1):
+    if mod == 1:
+        rewards = []
+        for i in range(len(est_ls_dict)):
+            pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "mass")
+            pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
+            rewards.append((pd_mass+pd_force)/2)
+        return 1-np.mean(rewards)
+    elif mo == 2:
+        reward_force = []
+        reward_mass = []
+        for i in range(len(est_ls_dict)):
+            pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "mass")
+            pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
+            reward_force.append(pd_force)
+            reward_mass.append(pd_mass)
+        return 1-np.mean(reward_force), 1-np.mean(reward_mass)
