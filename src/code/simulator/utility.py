@@ -69,7 +69,7 @@ def get_reward(true_ls_dict, est_ls_dict, Sigma, mod=1):
             pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
             rewards.append((pd_mass+pd_force)/2)
         return 1-np.mean(rewards)
-    elif mo == 2:
+    elif mod == 2:
         reward_force = []
         reward_mass = []
         for i in range(len(est_ls_dict)):
