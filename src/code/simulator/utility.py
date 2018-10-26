@@ -10,8 +10,6 @@ import numpy as np
 #--- Set functions ---
 def gaussian(s, d, Sigma, eta=10):
     diff = np.subtract(s,d)
-    #print "***************Difference***********"
-    #print diff
     return np.exp(-eta/2 * np.dot(np.dot(diff.T, np.linalg.inv(Sigma)), diff))
 
 def inner_expectation(true_dict, est_dict_ls, Sigma):
