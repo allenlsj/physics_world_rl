@@ -252,6 +252,7 @@ class physic_env():
 	                    old_state = true_state_dic_list[time-1][key][obj]
 	                    true_diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
 	                    true_diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
+	                    true_diff_r_theta['rotation'] = true_diff_r_theta['rotation'] + 2 * np.pi if true_diff_r_theta['rotation'] < 0 else true_diff_r_theta['rotation']
 	                    true_diff_obj_dic[obj] = true_diff_r_theta
 	                true_diff_state_dic[key] = true_diff_obj_dic
 	            true_diff_state.append(true_diff_state_dic)
@@ -261,7 +262,8 @@ class physic_env():
 	                    diff_r_theta = {}
 	                    current_state = simulate_state_dic_list[time][key][obj]
 	                    diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
-	                    diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
+	                    diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1] 
+	                    diff_r_theta['rotation'] = diff_r_theta['rotation'] + 2 * np.pi if diff_r_theta['rotation'] < 0 else diff_r_theta['rotation'] 
 	                    diff_obj_dic[obj] = diff_r_theta
 	                diff_state_dic[key] = diff_obj_dic
 	            diff_state.append(diff_state_dic)          
