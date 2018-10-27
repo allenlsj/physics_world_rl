@@ -10,8 +10,6 @@ import numpy as np
 #--- Set functions ---
 def gaussian(s, d, Sigma, eta=10):
     diff = np.subtract(s,d)
-    #print "***************Difference***********"
-    #print diff
     return np.exp(-eta/2 * np.dot(np.dot(diff.T, np.linalg.inv(Sigma)), diff))
 
 def inner_expectation(true_dict, est_dict_ls, Sigma):
@@ -69,7 +67,7 @@ def get_reward(true_ls_dict, est_ls_dict, Sigma, mod=1):
             pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
             rewards.append((pd_mass+pd_force)/2)
         return 1-np.mean(rewards)
-    elif mo == 2:
+    elif mod == 2:
         reward_force = []
         reward_mass = []
         for i in range(len(est_ls_dict)):
