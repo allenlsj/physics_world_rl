@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-environment.py
+agent.py
 """
 
 #IMPORT LIBRARIES
@@ -11,10 +11,10 @@ import random as rd
 import copy
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, vec2)
 from config import *
-from utility import *
+from prior import *
 
 class physic_env():
-	def __init__(self,cond,mass_list,force_list):
+	def __init__(self,cond,mass_list,force_list,prior):
 		# --- pybox2d world setup ---
 
 		# Create the world
@@ -26,7 +26,7 @@ class physic_env():
 		self.add_pucks()
 		self.add_static_walls()
 		self.mass_list = mass_list
-		self.force_list = force_list
+		self.force_list = force_list;self.prior = prior
 		#self.simulate_state_dic = {}
 		#self.true_state_dic = {}
 
@@ -139,20 +139,19 @@ class physic_env():
 						self.bodies[i].linearDamping = 0.05
 
 				#Store the position and velocity of object i
-				local_data[objname]['x'].append(bodies[i].position[0])
-				local_data[objname]['y'].append(bodies[i].position[1])
-				local_data[objname]['vx'].append(bodies[i].linearVelocity[0])
-				local_data[objname]['vy'].append(bodies[i].linearVelocity[1])
-				local_data[objname]['rotation'].append(bodies[i].angle)
+            local_data[objname]['x'].append(bodies[i].position[0])
+            local_data[objname]['y'].append(bodies[i].position[1])
+            local_data[objname]['vx'].append(bodies[i].linearVelocity[0])
+            local_data[objname]['vy'].append(bodies[i].linearVelocity[1])
+            local_data[objname]['rotation'].append(bodies[i].angle)
 
-				bodies[i].angularVelocity = 0 #Turned off all rotation but could include if we want
-				bodies[i].angle = 0
-			return local_data
+            bodies[i].angularVelocity = 0 #Turned off all rotation but could include if we want
+            bodies[i].angle = 0
+        return local_data
 
 	def Step10(self,control_vec,time_stamp = 10):
 	    simulate_state_dic_list = []
-	    true_state_dic_list = []
-
+	    true_state_dic_list = [];
 	    for t in range(time_stamp):
 
 	        cond = copy.deepcopy(self.cond)
@@ -197,11 +196,11 @@ class physic_env():
 	                    f_mag = (strength * m) / d**2
 	                    f_vec = (f_mag * np.cos(angle), f_mag * np.sin(angle))
 	                    #Print the calculated values
-	                    if i==0:
-	                        print (i,j, 'force', strength, m, d,
-	                            'rounded distance y', round(bodies[i].position[1] - bodies[j].position[1], 3),
-	                            'rounded distance x', round(bodies[i].position[0] - bodies[j].position[0], 3),
-	                            'angle', angle, f_mag, f_vec)
+	                    #if i==0:
+	                    #    print (i,j, 'force', strength, m, d,
+	                    #        'rounded distance y', round(bodies[i].position[1] - bodies[j].position[1], 3),
+	                    #        'rounded distance x', round(bodies[i].position[0] - bodies[j].position[0], 3),
+	                    #        'angle', angle, f_mag, f_vec)
 	                    
 	                    #Apply the force to the object
 	                    bodies[j].ApplyForce(force=f_vec, point=(0,0), wake=True)
@@ -212,7 +211,7 @@ class physic_env():
 	                c_vec = ( (1/0.19634954631328583) * 0.2*(control_vec['x'][t] - bodies[i].position[0]), 
 	                        (1/0.19634954631328583) * 0.2*(control_vec['y'][t] - bodies[i].position[1]))
 	                #Print the calculated values
-	                print (t, i, 'control force', bodies[i].position[0], bodies[i].position[1], bodies[i].angle, c_vec)
+	                #print (t, i, 'control force', bodies[i].position[0], bodies[i].position[1], bodies[i].angle, c_vec)
 
 	                #Apply the force to the object
 	                bodies[i].ApplyLinearImpulse(impulse=c_vec, point=(0,0), wake=True)
@@ -269,9 +268,10 @@ class physic_env():
 	            diff_state.append(diff_state_dic)          
 	        #print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
 	        #wreward,freward = get_reward(true_diff_state,diff_state)
-	    	reward = get_reward(true_diff_state,diff_state,SIGMA)
+	    	reward, self.prior = get_reward(true_diff_state,diff_state,SIGMA, self.prior)
+            print "****************Rewards************:{}".format(reward)
 	    return reward
-	        #print "****************Rewards************:{}".format(Reward)
+	    
     
 	def reset(self):
 		#Update the world         
