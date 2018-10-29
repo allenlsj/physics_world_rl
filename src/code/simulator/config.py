@@ -35,6 +35,11 @@ for num in force_possible:
 simulate_state_dic_list = None
 true_state_dic_list = None
 
+prior = dict()
+for m in mass_list:
+    for f in force_list:
+        prior[(tuple(m),tuple(np.array(f).flatten()))] = 1.0/(len(mass_list)*len(force_list))
+
 
 # --- SET STARTING CONDITIONS --- 
 # sls = starting locations, svs = starting velocities, lf = local forces, mass = object densities

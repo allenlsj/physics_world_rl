@@ -1,4 +1,4 @@
-from agent import physic_env
+from environment import physic_env
 import numpy as np
 from config import *
 
