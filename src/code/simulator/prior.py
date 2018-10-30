@@ -13,6 +13,9 @@ from utility import gaussian
 def softmax(x):
     return np.exp(x) / np.sum(np.exp(x))
 
+def weighted_sum(x):
+    return x/np.sum(x)
+
 def marginalize_prior(prior, axis):
     prior_marg = []
     if axis == 0:
@@ -43,10 +46,10 @@ def inner_expectation(true_dict, est_dict_ls, Sigma, prior_marg):
             theta_s = s_obj[obj]['rotation']
             s = (r_s, theta_s)
             error = gaussian(s, d, Sigma)
-            gaussian_obj *= error
             gaussian_sum.append(error)
-        posterior.append(gaussian_obj*prior_marg[i])
         gaussian_ls.append(np.mean(gaussian_sum))
+        gaussian_obj *= np.prod(softmax(gaussian_sum))
+        posterior.append(gaussian_obj*prior_marg[i])
     return np.average(gaussian_ls, weights=prior_marg), posterior
 
 def outer_expectation(true_dict, est_dict, Sigma, prior, update, out_type):
@@ -67,10 +70,11 @@ def outer_expectation(true_dict, est_dict, Sigma, prior, update, out_type):
         mass_expect = np.average(inner_e, weights=marginalize_prior(prior, 0))
         
         if update:
-            prior_mass = softmax(prior_mass)
+            prior_mass = weighted_sum(prior_mass)
             for index, mass in enumerate(mass_list):
                 for index2, force in enumerate(force_list):
                     prior[tuple(mass), tuple(np.array(force).flatten())] = prior_mass[index][index2]
+            return mass_expect, prior
                 
         return mass_expect
     
@@ -95,6 +99,7 @@ def outer_expectation(true_dict, est_dict, Sigma, prior, update, out_type):
             for index, force in enumerate(force_list):
                 for index2, mass in enumerate(mass_list):
                     prior[tuple(mass), tuple(np.array(force).flatten())] = prior_force[index][index2]
+            return force_expect, prior
             
         return force_expect
     
@@ -107,8 +112,8 @@ def get_reward(true_ls_dict, est_ls_dict, Sigma, prior, mod=1):
         rewards = []
         for i in range(len(est_ls_dict)):
             if i == len(est_ls_dict)-1:
-                pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "mass")
-                pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "force")
+                pd_mass, prior = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "mass")
+                pd_force, prior = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "force")
             else:
                 pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, False, "mass")
                 pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, False, "force")
@@ -120,8 +125,8 @@ def get_reward(true_ls_dict, est_ls_dict, Sigma, prior, mod=1):
         reward_mass = []
         for i in range(len(est_ls_dict)):
             if i == len(est_ls_dict)-1:
-                pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "mass")
-                pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "force")
+                pd_mass, prior = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "mass")
+                pd_force, prior = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "force")
             else:
                 pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, False, "mass")
                 pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, False, "force")
