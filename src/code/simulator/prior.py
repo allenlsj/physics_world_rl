@@ -95,7 +95,7 @@ def outer_expectation(true_dict, est_dict, Sigma, prior, update, out_type):
         force_expect = np.average(inner_e, weights=marginalize_prior(prior, 1))
         
         if update:
-            prior_force = softmax(prior_force)
+            prior_force = weighted_sum(prior_force)
             for index, force in enumerate(force_list):
                 for index2, mass in enumerate(mass_list):
                     prior[tuple(mass), tuple(np.array(force).flatten())] = prior_force[index][index2]
