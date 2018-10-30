@@ -143,8 +143,8 @@ class physic_env():
 	    simulate_state_dic_list = []
 	    true_state_dic_list = []
 	    # current_time
-	    #current_time = len(self.data['o1']['x'])
-	    #print(current_time)
+	    current_time = len(self.data['o1']['x'])
+	    print("current time",current_time)
 	    for t in range(0,time_stamp):
 	    	#print(t,"^^^^^^^^^",true_state_dic_list)
 	    	#Update the world
@@ -160,7 +160,7 @@ class physic_env():
 	        true_state_dic = {}
 	        for m in self.mass_list:
 	            for f in self.force_list:
-	            	if(t==0):
+	            	if(len(self.data['o1']['x'])==0):
 	            		cond = copy.deepcopy(self.cond)
 	            	else:
 	            		cond = self.update_condition(m,f)
