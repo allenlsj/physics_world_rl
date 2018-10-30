@@ -21,7 +21,9 @@ def inner_expectation(true_dict, est_dict_ls, Sigma):
     
     s_obj = true_dict.values()[0]
     gaussian_ls = []
+    #print("masssssssssssssssssssss")
     for est_dict in est_dict_ls:
+    	#print("*****************")
         for obj in est_dict:
             r = est_dict[obj]['r']
             theta =  est_dict[obj]['rotation']
@@ -29,7 +31,8 @@ def inner_expectation(true_dict, est_dict_ls, Sigma):
             r_s = s_obj[obj]['r']
             theta_s = s_obj[obj]['rotation']
             s = (r_s, theta_s)
-            gaussian_ls.append(gaussian(s, d, Sigma))         
+            gaussian_ls.append(gaussian(s, d, Sigma))  
+            #print(gaussian(s, d, Sigma))       
     return np.mean(gaussian_ls)
 
 def outer_expectation(true_dict, est_dict, Sigma, out_type):
@@ -89,3 +92,14 @@ def generate_force(n,x):
         n=s
     b.reverse()
     return b
+def store_state(bodies):
+    local_data = {}
+    for i in range(0,len(bodies)):
+        objname = 'o' + str(i + 1)
+        local_data[objname] = {}
+        local_data[objname]['x'] = [bodies[i].position[0]]
+        local_data[objname]['y'] = [bodies[i].position[1]]
+        local_data[objname]['vx'] = [bodies[i].linearVelocity[0]]
+        local_data[objname]['vy'] = [bodies[i].linearVelocity[1]]
+        local_data[objname]['rotation'] = [bodies[i].angle]
+    return local_data
