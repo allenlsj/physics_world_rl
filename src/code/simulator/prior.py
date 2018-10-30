@@ -34,7 +34,7 @@ def inner_expectation(true_dict, est_dict_ls, Sigma, prior_marg):
     posterior = []
     for i, est_dict in enumerate(est_dict_ls):
         gaussian_obj = 1
-        gaussian_sum = 0
+        gaussian_sum = []
         for obj in est_dict:
             r = est_dict[obj]['r']
             theta =  est_dict[obj]['rotation']
@@ -44,10 +44,9 @@ def inner_expectation(true_dict, est_dict_ls, Sigma, prior_marg):
             s = (r_s, theta_s)
             error = gaussian(s, d, Sigma)
             gaussian_obj *= error
-            gaussian_sum += error
+            gaussian_sum.append(error)
         posterior.append(gaussian_obj*prior_marg[i])
         gaussian_ls.append(np.mean(gaussian_sum))
-       
     return np.average(gaussian_ls, weights=prior_marg), posterior
 
 def outer_expectation(true_dict, est_dict, Sigma, prior, update, out_type):
