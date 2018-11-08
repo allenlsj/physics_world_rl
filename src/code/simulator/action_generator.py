@@ -16,7 +16,7 @@ Adapted from:
 https://gist.github.com/zeffii/c1e14dd6620ad855d81ec2e89a859719
 '''
 
-def generate_action(m_x, m_y, beta=1, T=15):
+def generate_action(m_x, m_y, beta=1.0, T=15):
     #  Modeled after no click action
     def NoClick(p):
         return None
@@ -217,7 +217,12 @@ def generate_action(m_x, m_y, beta=1, T=15):
         else:
             return 0.5 * BounceEaseOut(p * 2 - 1) + 0.5
 
-    fns = [NoClick, rightward, upward, LinearInterpolation, QuadraticEaseIn, QuadraticEaseOut, QuadraticEaseInOut, CubicEaseIn, CubicEaseOut, CubicEaseInOut, QuarticEaseIn, QuarticEaseOut, QuarticEaseInOut, QuinticEaseIn, QuinticEaseOut, QuinticEaseInOut, SineEaseIn, SineEaseInOut,SineEaseInOut, CircularEaseIn, CircularEaseOut, CircularEaseInOut, ExponentialEaseIn, ExponentialEaseOut, ExponentialEaseInOut, ElasticEaseIn, ElasticEaseOut, ElasticEaseInOut, BackEaseIn, BackEaseOut, BackEaseInOut, BounceEaseIn, BounceEaseOut, BounceEaseInOut]
+    fns = [NoClick, rightward, upward, LinearInterpolation, QuadraticEaseIn, QuadraticEaseOut, 
+           QuadraticEaseInOut, CubicEaseIn, CubicEaseOut, CubicEaseInOut, QuarticEaseIn, QuarticEaseOut, 
+           QuarticEaseInOut, QuinticEaseIn, QuinticEaseOut, QuinticEaseInOut, SineEaseIn, SineEaseInOut,
+           SineEaseInOut, CircularEaseIn, CircularEaseOut, CircularEaseInOut, ExponentialEaseIn, 
+           ExponentialEaseOut, ExponentialEaseInOut, ElasticEaseIn, ElasticEaseOut, ElasticEaseInOut, 
+           BackEaseIn, BackEaseOut, BackEaseInOut, BounceEaseIn, BounceEaseOut, BounceEaseInOut]
 
     fn = random.choice(fns)
     if fn.__name__ == 'NoClick':
