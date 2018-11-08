@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+action_generator.py
+"""
+
 from math import sqrt, pow, sin, cos
 from math import pi as M_PI
 import numpy as np
