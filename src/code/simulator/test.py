@@ -7,14 +7,16 @@ new_env = physic_env(cond,mass_list,force_list)
 
 
 # test 10 time frame:
-#
-# print("start")
-# reward = new_env.Step10(control_vec)
-# print(reward)
+#print("*********",self.bodies[0].position[0])
+print("start")
+reward = new_env.step(control_vec)
+#state = new_env.reset(10)
+#print(state)
+print(reward)
 
 
 # test the whole process.
-for i in range(cond['timeout']/10):
-	print("time",i)
-	reward = new_env.Step10(control_vec)
-	print(reward)
+# for i in range(cond['timeout']/10):
+# 	print("time",i)
+# 	reward = new_env.Step10(control_vec)
+# 	print(reward)

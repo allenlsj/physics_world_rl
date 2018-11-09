@@ -48,7 +48,8 @@ class physic_env():
 		    #Add it to our list of dynamic objects
 		    self.bodies.append(b)
 		    #Add a named entry in the data for this object
-		    self.data[objname] = {'x':[], 'y':[], 'vx':[], 'vy':[], 'rotation':[]} 
+		    # init self.data by intial condition
+		    self.data[objname] = {'x':[b.position[0]], 'y':[b.position[1]], 'vx':[b.linearVelocity[0]], 'vy':[b.linearVelocity[1]], 'rotation':[b.angle]} 
 
 		self.data['co'] = [] #Add an entry for controlled object's ID (0 none, 1-4 are objects 'o1'--'o4')
 		self.data['mouse'] = {'x':[], 'y':[]} #Add an entry for the mouse position
@@ -73,7 +74,6 @@ class physic_env():
 		w.CreateFixture(shape=polygonShape(box=(BORDER, HEIGHT/2)), friction = 0.05, restitution = 0.98)
 		self.walls.append(w)
 
-
 	def generate_states(self, cond, control_vec,t):
 		bodies = []
 		for i in range(0, len(cond['sls'])):
@@ -85,48 +85,13 @@ class physic_env():
 	                                userData = {'name': objname, 'bodyType': 'dynamic'})
 			b.linearVelocity = vec2(cond['svs'][i]['x'], cond['svs'][i]['y'])
 			#Add the the shape 'fixture'
-			#circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+			# circle = b.CreateCircleFixture(radius=BALL_RADIUS,
 			#                            density=cond['mass'][i],
 			#                            friction=0.05, restitution=0.98)
 			b.mass = cond['mass'][i]
 			#Add it to our list of dynamic objects
 			bodies.append(b)
-		#print(t,"---------------",bodies[0].position)
-		#Loop over the dynamic objects
-		for i in range(0,len(bodies)):
-			#Grab and print current object name and location
-			objname = bodies[i].userData['name']
-			# print (objname, bodies[i].position)
-
-			#Apply local forces
-			for j in range(0, len(bodies)):
-				#NB: The force strengths should be symmetric i,j==j,i for normal physics
-				#otherwise you'll get "chasing" behaviour
-				strength = cond['lf'][i][j]
-				#If there's a pairwise interaction between these two objects...
-				if strength!=0 and i!=j:
-					#Calculate its force based on the objects masses and distances
-					m = bodies[i].mass * bodies[j].mass
-					d = ((bodies[i].position[0] - bodies[j].position[0])**2 +
-						(bodies[i].position[1] - bodies[j].position[1])**2)**0.5
-
-					angle = np.arctan2(bodies[i].position[1] - bodies[j].position[1],
-								bodies[i].position[0] - bodies[j].position[0])
-					f_mag = (strength * m) / d**2
-					f_vec = (f_mag * np.cos(angle), f_mag * np.sin(angle))
-					#Apply the force to the object
-					bodies[j].ApplyForce(force=f_vec, point=(0,0), wake=True)
-
-			if control_vec['obj'][t]==(i+1):
-				bodies[i].linearDamping = 10
-
-				c_vec = ( (1/0.19634954631328583) * 0.2*(control_vec['x'][t] - self.bodies[i].position[0]), 
-						(1/0.19634954631328583) * 0.2*(control_vec['y'][t] - self.bodies[i].position[1]))
-				#Apply the force to the object
-				bodies[i].ApplyLinearImpulse(impulse=c_vec, point=(0,0), wake=True)
-				if t!=(len(control_vec['obj'])-1):
-					if control_vec['obj'][t+1]==0:
-						bodies[i].linearDamping = 0.05
+		bodies = simulate(bodies, cond, control_vec, t)
 		#print(t,"===============",bodies[0].position)
 		#Update the world
 		self.world.Step(TIME_STEP, 3, 3)
@@ -139,76 +104,37 @@ class physic_env():
 		bodies[i].angle = 0
 		return local_data
 
-	def Step10(self,control_vec,time_stamp = 11):
+	def step(self,control_vec,time_stamp = 10):
 	    simulate_state_dic_list = []
 	    true_state_dic_list = []
 	    # current_time
 	    current_time = len(self.data['o1']['x'])
 	    print("current time",current_time)
+	    current_initial_state = store_state(self.bodies)
 	    for t in range(0,time_stamp):
-	    	#print(t,"^^^^^^^^^",true_state_dic_list)
-	    	#Update the world
-	    	self.world.Step(TIME_STEP, 3, 3)
-	    	#print(t,"^^^^^^^^^",true_state_dic_list)
-	    	#Remove any forces applied at the previous timepoint (these will be recalculated and reapplied below)
-	    	self.world.ClearForces()
-	    	#cond = copy.deepcopy(self.cond)
-	        #bodies = self.bodies[:]
-	        #data = copy.deepcopy(self.data)
-
+	    	# Update the world
+	    	# self.world.Step(TIME_STEP, 3, 3)
+	    	# self.world.ClearForces()
+	    	# print("^^^",t,self.bodies[0].position[0])
+	    	# Simulate
+	    	print(t)
 	        simulate_state_dic = {}
 	        true_state_dic = {}
 	        for m in self.mass_list:
 	            for f in self.force_list:
-	            	if(len(self.data['o1']['x'])==0):
-	            		cond = copy.deepcopy(self.cond)
-	            	else:
-	            		cond = self.update_condition(m,f)
+	            	cond = self.update_condition(m,f)
 	                simulate_state_dic[(tuple(m),tuple(np.array(f).flatten()))] = self.generate_states(cond,control_vec,t)
 	                #data = copy.deepcopy(self.data)
 	        simulate_state_dic_list.append(simulate_state_dic)
-
-	        cond = self.cond
-	        bodies = self.bodies
+	        
 	        #data = self.data
 	        #Loop over the dynamic objects
+	        bodies = simulate(self.bodies, self.cond, control_vec, t)
+	        self.world.Step(TIME_STEP, 3, 3)
+	    	self.world.ClearForces()
+
 	        for i in range(0,len(bodies)):
-	            #Grab and print current object name and location
 	            objname = bodies[i].userData['name']
-	            #Apply local forces
-	            for j in range(0, len(bodies)):
-	                
-	                #NB: The force strengths should be symmetric i,j==j,i for normal physics
-	                #otherwise you'll get "chasing" behaviour
-	                strength = cond['lf'][i][j]
-	                #If there's a pairwise interaction between these two objects...
-	                if strength!=0 and i!=j:
-	                    #Calculate its force based on the objects masses and distances
-	                    m = bodies[i].mass * bodies[j].mass
-	                    d = ((bodies[i].position[0] - bodies[j].position[0])**2 +
-	                        (bodies[i].position[1] - bodies[j].position[1])**2)**0.5
-
-	                    angle = np.arctan2(bodies[i].position[1] - bodies[j].position[1],
-	                                bodies[i].position[0] - bodies[j].position[0])
-	                    f_mag = (strength * m) / d**2
-	                    f_vec = (f_mag * np.cos(angle), f_mag * np.sin(angle))
-	                    #Apply the force to the object
-	                    bodies[j].ApplyForce(force=f_vec, point=(0,0), wake=True)
-
-	            if control_vec['obj'][t]==(i+1):
-	                bodies[i].linearDamping = 10
-
-	                c_vec = ( (1/0.19634954631328583) * 0.2*(control_vec['x'][t] - bodies[i].position[0]), 
-	                        (1/0.19634954631328583) * 0.2*(control_vec['y'][t] - bodies[i].position[1]))
-	                #Print the calculated values
-	                #print (t, i, 'control force', bodies[i].position[0], bodies[i].position[1], bodies[i].angle, c_vec)
-
-	                #Apply the force to the object
-	                bodies[i].ApplyLinearImpulse(impulse=c_vec, point=(0,0), wake=True)
-	                if t!=(len(control_vec['obj'])-1):
-	                    if control_vec['obj'][t+1]==0:
-	                        bodies[i].linearDamping = 0.05
-	            
 	            #Store the position and velocity of object i
 	            self.data[objname]['x'].append(bodies[i].position[0])
 	            self.data[objname]['y'].append(bodies[i].position[1])
@@ -227,24 +153,26 @@ class physic_env():
 	        #import ipdb;ipdb.set_trace()
 	        true_state_dic_list.append(true_state_dic)
 	        #print("&&&&&&&&&&&&&&",true_state_dic)
-
 	    if(simulate_state_dic_list):
 	        diff_state = []
 	        true_diff_state = []
-	        # change: from t+1 to t+10
-	        for time in range(1,time_stamp):
+	        # change: from t to t+9
+	        for time in range(0,time_stamp):
 	            diff_state_dic = {}
 	            true_diff_state_dic = {}
 	            for key in true_state_dic_list[0]:
 	                true_diff_obj_dic = {}
+	                if(time == 0):
+		            	old_state = current_initial_state
+	                else:
+	                	old_state = true_state_dic_list[time-1][key]
 	                for obj in ['o1','o2','o3','o4']:
 	                    true_diff_r_theta = {}
 	                    current_state = true_state_dic_list[time][key][obj]
 	                    # if(obj == 'o1'):
-	                    # 	print(time,"#################true current state",current_state['x'][-1],current_state['y'][-1])
-	                    old_state = true_state_dic_list[time-1][key][obj]
-	                    true_diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
-	                    true_diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1]
+	                    # 	print(time,"#################true current state",old_state[obj]['x'][-1],current_state['x'][-1])
+	                    true_diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state[obj]['x'][-1])**2 + (current_state['y'][-1] - old_state[obj]['y'][-1])**2)
+	                    true_diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state[obj]['rotation'][-1]
 	                    true_diff_r_theta['rotation'] = true_diff_r_theta['rotation'] + 2 * np.pi if true_diff_r_theta['rotation'] < 0 else true_diff_r_theta['rotation']
 	                    true_diff_obj_dic[obj] = true_diff_r_theta
 	                true_diff_state_dic[key] = true_diff_obj_dic
@@ -256,9 +184,9 @@ class physic_env():
 	                    diff_r_theta = {}
 	                    current_state = simulate_state_dic_list[time][key][obj]
 	                    # if(obj== 'o1'):
-	                    # 	prin t(time,"*********simulate current state",current_state['x'][-1],current_state['y'][-1])
-	                    diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state['x'][-1])**2 + (current_state['y'][-1] - old_state['y'][-1])**2)
-	                    diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state['rotation'][-1] 
+	                    # 	print(time,"*********simulate current state",old_state[obj]['x'][-1],current_state['x'][-1])
+	                    diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state[obj]['x'][-1])**2 + (current_state['y'][-1] - old_state[obj]['y'][-1])**2)
+	                    diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state[obj]['rotation'][-1] 
 	                    diff_r_theta['rotation'] = diff_r_theta['rotation'] + 2 * np.pi if diff_r_theta['rotation'] < 0 else diff_r_theta['rotation'] 
 	                    diff_obj_dic[obj] = diff_r_theta
 	                diff_state_dic[key] = diff_obj_dic
@@ -268,7 +196,10 @@ class physic_env():
 	        #print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
 	        #wreward,freward = get_reward(true_diff_state,diff_state)
 	    	reward = get_reward(true_diff_state,diff_state,SIGMA)
-	    return reward
+	    	PD_mass = get_reward(true_diff_state,diff_state,SIGMA,2)
+	    	PD_force = get_reward(true_diff_state,diff_state,SIGMA,3)
+	    # return reward
+	    return PD_mass,PD_force,true_state_dic_list
 	        #print "****************Rewards************:{}".format(Reward)
 	def update_condition(self, m, f):
 		cond = {}
@@ -283,8 +214,41 @@ class physic_env():
 		cond['lf'] = f
 		return cond
 
-	def reset(self):
-		#Update the world         
-		self.world.Step(TIME_STEP, 3, 3)
-		#Remove any forces applied at the previous timepoint (these will be recalculated and reapplied below)
-		self.world.ClearForces()
+	def reset(self,time_stamp = 15):
+		self.bodies = []
+		self.data = {}
+		self.add_pucks()
+		true_state_list = []
+		control_vec = {'obj': np.repeat(0, time_stamp), 'x':np.repeat(3, time_stamp), 'y':np.repeat(3, time_stamp)}
+		for t in range(0,time_stamp):
+			self.world.Step(TIME_STEP, 3, 3)
+			self.world.ClearForces()
+			#print(self.bodies[0].position[0])
+			bodies = simulate(self.bodies, self.cond, control_vec, t)
+			for i in range(0,len(bodies)):
+				objname = bodies[i].userData['name']
+				r = np.sqrt((bodies[i].position[0] - self.data[objname]['x'][-1])**2 + (bodies[i].position[1]- self.data[objname]['y'][-1])**2)
+				# print("^^^",r)
+				theta = bodies[i].angle - self.data[objname]['rotation'][-1]
+				theta = theta + 2 * np.pi if theta < 0 else theta
+				true_state_list.append(r)
+				true_state_list.append(theta) 
+				self.data[objname]['x'].append(bodies[i].position[0])
+				self.data[objname]['y'].append(bodies[i].position[1])
+				self.data[objname]['vx'].append(bodies[i].linearVelocity[0])
+				self.data[objname]['vy'].append(bodies[i].linearVelocity[1])
+				self.data[objname]['rotation'].append(bodies[i].angle)
+
+				self.bodies[i].angularVelocity = 0 #Turned off all rotation but could include if we want
+				self.bodies[i].angle = 0
+				
+	        #Store the target of the controller (i.e. is one of the objects selected?)
+	        #And the current position of the controller (i.e. mouse)
+	        self.data['co'].append(control_vec['obj'][t])
+	        self.data['mouse']['x'].append(control_vec['x'][t])
+	        self.data['mouse']['y'].append(control_vec['y'][t])
+		print(len(true_state_list))
+		return true_state_list
+
+
+

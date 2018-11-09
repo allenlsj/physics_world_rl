@@ -109,3 +109,38 @@ def store_state(bodies):
         local_data[objname]['vy'] = [bodies[i].linearVelocity[1]]
         local_data[objname]['rotation'] = [bodies[i].angle]
     return local_data
+def simulate(bodies, cond, control_vec, t):
+    #Loop over the dynamic objects
+    for i in range(0,len(bodies)):
+        #Grab and print current object name and location
+        objname = bodies[i].userData['name']
+        #Apply local forces
+        for j in range(0, len(bodies)):
+            #NB: The force strengths should be symmetric i,j==j,i for normal physics
+            #otherwise you'll get "chasing" behaviour
+            strength = cond['lf'][i][j]
+            #If there's a pairwise interaction between these two objects...
+            if strength!=0 and i!=j:
+                #Calculate its force based on the objects masses and distances
+                m = bodies[i].mass * bodies[j].mass
+                d = ((bodies[i].position[0] - bodies[j].position[0])**2 +
+                    (bodies[i].position[1] - bodies[j].position[1])**2)**0.5
+
+                angle = np.arctan2(bodies[i].position[1] - bodies[j].position[1],
+                            bodies[i].position[0] - bodies[j].position[0])
+                f_mag = (strength * m) / d**2
+                f_vec = (f_mag * np.cos(angle), f_mag * np.sin(angle))
+                #Apply the force to the object
+                bodies[j].ApplyForce(force=f_vec, point=(0,0), wake=True)
+        if control_vec['obj'][t]==(i+1):
+            bodies[i].linearDamping = 10
+
+            c_vec = ( (1/0.19634954631328583) * 0.2*(control_vec['x'][t] - bodies[i].position[0]),
+                    (1/0.19634954631328583) * 0.2*(control_vec['y'][t] - bodies[i].position[1]))
+            #Apply the force to the object
+            bodies[i].ApplyLinearImpulse(impulse=c_vec, point=(0,0), wake=True)
+            if t!=(len(control_vec['obj'])-1):
+                if control_vec['obj'][t+1]==0:
+                    bodies[i].linearDamping = 0.05
+    return bodies
+

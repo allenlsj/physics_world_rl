@@ -72,3 +72,18 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
 #     'mass':[1.0,1.0,1.0,1.0],
 #     'timeout': 240
 # } 
+
+# reduce sample size to 2**7
+mass_list = [[1,1,1,1], [1,2,1,1]]
+force_possible =[]
+for i in range(2**6):
+    force_possible.append([0]*(6-len(generate_force(i,2)))+generate_force(i,2))
+force_list = []
+for num in force_possible:
+    num = np.array(num)
+    force = np.zeros([4,4])
+    force[1,0] = (num[0]-1)*3
+    force[2,:2] = (num[1:3]-1)*3
+    force[3,:3] = (num[3:]-1)*3
+    force = force+force.T
+    force_list.append(force)
