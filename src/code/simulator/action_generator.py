@@ -224,6 +224,7 @@ def generate_action(m_x, m_y, index, beta=1.0, T=15):
     index_list = np.arange(0, num_obj*((len(fns)-3)*4+2*2+1))
     obj_list = np.arange(0, num_obj)
 
+    # find corresponding index of fns
     index_action = index // num_obj
     obj = index % num_obj
     if index_action == 0:
@@ -233,7 +234,7 @@ def generate_action(m_x, m_y, index, beta=1.0, T=15):
     else:
         index_action_fun = (index_action-5)//4+3
 
-
+    # generate new action paths based on the input index
     if index_action_fun == 0:
         fn = NoClick
         new_m_x = [m_x] * T
@@ -269,6 +270,11 @@ def generate_action(m_x, m_y, index, beta=1.0, T=15):
         new_m_x = [m_x + i for i in x]
         new_m_y = [m_y + j for j in y]
 
+    # reset the mouse position if necessary
+    new_m_x = [5.75 if i>5.75 else 0.25 if i<0.25 else i for i in new_m_x]
+    new_m_y = [3.75 if i>3.75 else 0.25 if i<0.25 else i for i in new_m_y]
+
+    # randomly generate new paths
     # fn = random.choice(fns)
     # if fn.__name__ == 'NoClick':
     #     new_m_x = [m_x] * T
@@ -298,9 +304,11 @@ def generate_action(m_x, m_y, index, beta=1.0, T=15):
     #     new_m_x = [m_x + i for i in x]
     #     new_m_y = [m_y + j for j in y]
 
+
+
     return obj, new_m_x, new_m_y
 
 if __name__ == "__main__":
-    obj,x,y = generate_action(1,1,644)
+    obj,x,y = generate_action(3,2,577)
     plt.plot(x,y)
     plt.show()

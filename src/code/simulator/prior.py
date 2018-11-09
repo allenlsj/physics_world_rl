@@ -121,15 +121,21 @@ def get_reward(true_ls_dict, est_ls_dict, Sigma, prior, mod=1):
         return 1.0-np.mean(rewards), prior
     
     elif mod == 2:
-        reward_force = []
         reward_mass = []
         for i in range(len(est_ls_dict)):
             if i == len(est_ls_dict)-1:
                 pd_mass, prior = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "mass")
-                pd_force, prior = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "force")
             else:
                 pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, False, "mass")
+            reward_mass.append(pd_mass)
+        return 1.0-np.mean(reward_mass), prior
+
+    elif mod == 3:
+        reward_force = []
+        for i in range(len(est_ls_dict)):
+            if i == len(est_ls_dict)-1:
+                pd_force, prior = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, True, "force")
+            else:
                 pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, prior, False, "force")
             reward_force.append(pd_force)
-            reward_mass.append(pd_mass)
-        return 1.0-np.mean(reward_force), 1.0-np.mean(reward_mass), prior
+        return 1.0-np.mean(reward_force), prior

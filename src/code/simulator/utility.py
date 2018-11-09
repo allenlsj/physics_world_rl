@@ -70,15 +70,20 @@ def get_reward(true_ls_dict, est_ls_dict, Sigma, mod=1):
             pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
             rewards.append((pd_mass+pd_force)/2)
         return 1-np.mean(rewards)
+    
     elif mod == 2:
-        reward_force = []
         reward_mass = []
         for i in range(len(est_ls_dict)):
             pd_mass = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "mass")
+            reward_mass.append(pd_mass)
+        return 1-np.mean(reward_mass)
+    
+    elif mod == 3:
+        reward_force = []
+        for i in range(len(est_ls_dict)):
             pd_force = outer_expectation(true_ls_dict[i], est_ls_dict[i], Sigma, "force")
             reward_force.append(pd_force)
-            reward_mass.append(pd_mass)
-        return 1-np.mean(reward_force), 1-np.mean(reward_mass)
+        return 1-np.mean(reward_force)
 
 def generate_force(n,x):
     a=[0,1,2,3,4,5,6,7,8,9,'A','b','C','D','E','F']
@@ -92,6 +97,7 @@ def generate_force(n,x):
         n=s
     b.reverse()
     return b
+
 def store_state(bodies):
     local_data = {}
     for i in range(0,len(bodies)):
