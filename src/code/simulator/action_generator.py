@@ -10,13 +10,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 M_PI_2 = M_PI * 2
-
+num_obj = 4 + 1
 '''
 Adapted from: 
 https://gist.github.com/zeffii/c1e14dd6620ad855d81ec2e89a859719
 '''
 
-def generate_action(m_x, m_y, beta=1.0, T=15):
+def generate_action(m_x, m_y, index, beta=1.0, T=15):
     #  Modeled after no click action
     def NoClick(p):
         return None
@@ -217,20 +217,31 @@ def generate_action(m_x, m_y, beta=1.0, T=15):
         else:
             return 0.5 * BounceEaseOut(p * 2 - 1) + 0.5
 
-    fns = [NoClick, rightward, upward, LinearInterpolation, QuadraticEaseIn, QuadraticEaseOut, 
-           QuadraticEaseInOut, CubicEaseIn, CubicEaseOut, CubicEaseInOut, QuarticEaseIn, QuarticEaseOut, 
-           QuarticEaseInOut, QuinticEaseIn, QuinticEaseOut, QuinticEaseInOut, SineEaseIn, SineEaseInOut,
-           SineEaseInOut, CircularEaseIn, CircularEaseOut, CircularEaseInOut, ExponentialEaseIn, 
-           ExponentialEaseOut, ExponentialEaseInOut, ElasticEaseIn, ElasticEaseOut, ElasticEaseInOut, 
-           BackEaseIn, BackEaseOut, BackEaseInOut, BounceEaseIn, BounceEaseOut, BounceEaseInOut]
+    def find_direction_index(index, index_action_fun):
+        return int((index-index_action_fun*num_obj)//num_obj)
 
-    fn = random.choice(fns)
-    if fn.__name__ == 'NoClick':
+    fns = [NoClick, upward, rightward, LinearInterpolation, QuadraticEaseIn, QuadraticEaseOut, QuadraticEaseInOut, CubicEaseIn, CubicEaseOut, CubicEaseInOut, QuarticEaseIn, QuarticEaseOut, QuarticEaseInOut, QuinticEaseIn, QuinticEaseOut, QuinticEaseInOut, SineEaseIn, SineEaseInOut,SineEaseInOut, CircularEaseIn, CircularEaseOut, CircularEaseInOut, ExponentialEaseIn, ExponentialEaseOut, ExponentialEaseInOut, ElasticEaseIn, ElasticEaseOut, ElasticEaseInOut, BackEaseIn, BackEaseOut, BackEaseInOut, BounceEaseIn, BounceEaseOut, BounceEaseInOut]
+    index_list = np.arange(0, num_obj*((len(fns)-3)*4+2*2+1))
+    obj_list = np.arange(0, num_obj)
+
+    index_action = index // num_obj
+    obj = index % num_obj
+    if index_action == 0:
+        index_action_fun = 0
+    elif index_action in [1,2,3,4]:
+        index_action_fun = (index_action-1)//2+1
+    else:
+        index_action_fun = (index_action-5)//4+3
+
+
+    if index_action_fun == 0:
+        fn = NoClick
         new_m_x = [m_x] * T
         new_m_y = [m_y] * T
-    elif fn.__name__ == 'upward':
-        dir_y = np.random.randint(2)
+    elif index_action_fun == 1:
+        fn = upward
         new_m_x = [m_x] * T
+        dir_y = find_direction_index(index, index_action_fun)
         if dir_y == 0:
             y = fn()
         else:
@@ -238,24 +249,58 @@ def generate_action(m_x, m_y, beta=1.0, T=15):
         y = y.tolist()
         new_m_y = [m_y + j for j in y]
     else:
-        dir_x = np.random.randint(2)
-        dir_y = np.random.randint(2)
+        fn = fns[index_action_fun]
         x = np.arange(0, beta, beta/T)
         y = list(map(fn, x))
-        if dir_x == 0:
-            if dir_y == 1:
-                y = [-i for i in y]
+        if index_action_fun == 2:
+            dir_x = find_direction_index(index, index_action_fun + 1)
+            if dir_x == 1:
+                x = -x
         else:
-            x = -x
-            if dir_y == 1:
+            dir_ = find_direction_index(index, index_action_fun*4-7)
+            if dir_ == 2:
+                y = [-i for i in y]
+            elif dir_ == 3:
+                x = -x
+            elif dir_ == 4:
+                x = -x
                 y = [-i for i in y]
         x = x.tolist()
         new_m_x = [m_x + i for i in x]
         new_m_y = [m_y + j for j in y]
 
-    return new_m_x, new_m_y
+    # fn = random.choice(fns)
+    # if fn.__name__ == 'NoClick':
+    #     new_m_x = [m_x] * T
+    #     new_m_y = [m_y] * T
+    # elif fn.__name__ == 'upward':
+    #     dir_y = np.random.randint(2)
+    #     new_m_x = [m_x] * T
+    #     if dir_y == 0:
+    #         y = fn()
+    #     else:
+    #         y = -fn()
+    #     y = y.tolist()
+    #     new_m_y = [m_y + j for j in y]
+    # else:
+    #     dir_x = np.random.randint(2)
+    #     dir_y = np.random.randint(2)
+    #     x = np.arange(0, beta, beta/T)
+    #     y = list(map(fn, x))
+    #     if dir_x == 0:
+    #         if dir_y == 1:
+    #             y = [-i for i in y]
+    #     else:
+    #         x = -x
+    #         if dir_y == 1:
+    #             y = [-i for i in y]
+    #     x = x.tolist()
+    #     new_m_x = [m_x + i for i in x]
+    #     new_m_y = [m_y + j for j in y]
+
+    return obj, new_m_x, new_m_y
 
 if __name__ == "__main__":
-    x,y = generate_action(1,1)
+    obj,x,y = generate_action(1,1,644)
     plt.plot(x,y)
     plt.show()
