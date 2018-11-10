@@ -14,7 +14,7 @@ from config import *
 from utility import *
 
 class physic_env():
-	def __init__(self,cond,mass_list,force_list):
+	def __init__(self,cond,mass_list,force_list,time_stamp=15,PD_mode=2):
 		# --- pybox2d world setup ---
 
 		# Create the world
@@ -27,6 +27,8 @@ class physic_env():
 		self.add_static_walls()
 		self.mass_list = mass_list
 		self.force_list = force_list
+		self.T = time_stamp
+		self.PD_mode = PD_mode
 		#self.simulate_state_dic = {}
 		#self.true_state_dic = {}
 
@@ -104,20 +106,20 @@ class physic_env():
 		bodies[i].angle = 0
 		return local_data
 
-	def step(self,control_vec,time_stamp = 10):
+	def step(self,control_vec):
 	    simulate_state_dic_list = []
 	    true_state_dic_list = []
 	    # current_time
 	    current_time = len(self.data['o1']['x'])
 	    print("current time",current_time)
 	    current_initial_state = store_state(self.bodies)
-	    for t in range(0,time_stamp):
+	    for t in range(0,self.T):
 	    	# Update the world
 	    	# self.world.Step(TIME_STEP, 3, 3)
 	    	# self.world.ClearForces()
 	    	# print("^^^",t,self.bodies[0].position[0])
 	    	# Simulate
-	    	print(t)
+	    	#print(t)
 	        simulate_state_dic = {}
 	        true_state_dic = {}
 	        for m in self.mass_list:
@@ -156,8 +158,9 @@ class physic_env():
 	    if(simulate_state_dic_list):
 	        diff_state = []
 	        true_diff_state = []
+	        states = []
 	        # change: from t to t+9
-	        for time in range(0,time_stamp):
+	        for time in range(0,self.T):
 	            diff_state_dic = {}
 	            true_diff_state_dic = {}
 	            for key in true_state_dic_list[0]:
@@ -171,9 +174,15 @@ class physic_env():
 	                    current_state = true_state_dic_list[time][key][obj]
 	                    # if(obj == 'o1'):
 	                    # 	print(time,"#################true current state",old_state[obj]['x'][-1],current_state['x'][-1])
-	                    true_diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state[obj]['x'][-1])**2 + (current_state['y'][-1] - old_state[obj]['y'][-1])**2)
-	                    true_diff_r_theta['rotation'] = current_state['rotation'][-1] - old_state[obj]['rotation'][-1]
-	                    true_diff_r_theta['rotation'] = true_diff_r_theta['rotation'] + 2 * np.pi if true_diff_r_theta['rotation'] < 0 else true_diff_r_theta['rotation']
+	                    r = np.sqrt((current_state['x'][-1] - old_state[obj]['x'][-1])**2 + (current_state['y'][-1] - old_state[obj]['y'][-1])**2)
+	                    theta = current_state['rotation'][-1] - old_state[obj]['rotation'][-1]
+	                    theta = theta + 2 * np.pi if theta < 0 else theta
+	                    # add (r,theta) to state list
+	                    states.append(r)
+	                    states.append(theta)
+	                    # add (r,theta) to state dictionary for reward function
+	                    true_diff_r_theta['r'] = r
+	                    true_diff_r_theta['rotation'] = theta
 	                    true_diff_obj_dic[obj] = true_diff_r_theta
 	                true_diff_state_dic[key] = true_diff_obj_dic
 	            true_diff_state.append(true_diff_state_dic)
@@ -195,11 +204,11 @@ class physic_env():
 	            diff_state.append(diff_state_dic)          
 	        #print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
 	        #wreward,freward = get_reward(true_diff_state,diff_state)
-	    	reward = get_reward(true_diff_state,diff_state,SIGMA)
-	    	PD_mass = get_reward(true_diff_state,diff_state,SIGMA,2)
-	    	PD_force = get_reward(true_diff_state,diff_state,SIGMA,3)
+	    	reward = get_reward(true_diff_state,diff_state,SIGMA,self.PD_mode)
+	    	mouse_states = [self.data['mouse']['x'][-1],self.data['mouse']['y'][-1]]
+	    	stop_flag = True
 	    # return reward
-	    return PD_mass,PD_force,true_state_dic_list
+	    return states,reward,stop_flag,mouse_states
 	        #print "****************Rewards************:{}".format(Reward)
 	def update_condition(self, m, f):
 		cond = {}
@@ -214,7 +223,8 @@ class physic_env():
 		cond['lf'] = f
 		return cond
 
-	def reset(self,time_stamp = 15):
+	def reset(self):
+		time_stamp = self.T
 		self.bodies = []
 		self.data = {}
 		self.add_pucks()

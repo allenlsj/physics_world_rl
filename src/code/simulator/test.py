@@ -10,8 +10,8 @@ new_env = physic_env(cond,mass_list,force_list)
 #print("*********",self.bodies[0].position[0])
 print("start")
 reward = new_env.step(control_vec)
-#state = new_env.reset(10)
-#print(state)
+# state = new_env.reset()
+# print(state)
 print(reward)
 
 
