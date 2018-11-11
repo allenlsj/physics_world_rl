@@ -43,9 +43,9 @@ class physic_env():
 		                                userData = {'name': objname, 'bodyType': 'dynamic'})
 		    b.linearVelocity = vec2(self.cond['svs'][i]['x'], self.cond['svs'][i]['y'])
 		    #Add the the shape 'fixture'
-		    circle = b.CreateCircleFixture(radius=BALL_RADIUS,
-		                                   density=self.cond['mass'][i],
-		                                   friction=0.05, restitution=0.98)
+		    # circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+		    #                                density=self.cond['mass'][i],
+		    #                                friction=0.05, restitution=0.98)
 		    b.mass = self.cond['mass'][i]
 		    #Add it to our list of dynamic objects
 		    self.bodies.append(b)
@@ -106,7 +106,9 @@ class physic_env():
 		bodies[i].angle = 0
 		return local_data
 
-	def step(self,control_vec):
+	def step(self,action_idx):
+		obj, mouse_x, mouse_y = generate_action(self.data['mouse']['x'][-1],self.data['mouse']['y'][-1],action_idx)
+		control_vec = {'obj': np.repeat(obj, self.T), 'x':mouse_x, 'y':mouse_y}
 	    simulate_state_dic_list = []
 	    true_state_dic_list = []
 	    # current_time
@@ -205,10 +207,10 @@ class physic_env():
 	        #print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
 	        #wreward,freward = get_reward(true_diff_state,diff_state)
 	    	reward = get_reward(true_diff_state,diff_state,SIGMA,self.PD_mode)
-	    	mouse_states = [self.data['mouse']['x'][-1],self.data['mouse']['y'][-1]]
+	    	#mouse_states = [self.data['mouse']['x'][-1],self.data['mouse']['y'][-1]]
 	    	stop_flag = True
 	    # return reward
-	    return states,reward,stop_flag,mouse_states
+	    return states,reward,stop_flag
 	        #print "****************Rewards************:{}".format(Reward)
 	def update_condition(self, m, f):
 		cond = {}
