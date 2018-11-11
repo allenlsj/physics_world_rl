@@ -303,9 +303,6 @@ def generate_action(m_x, m_y, index, beta=1.0, T=15):
     #     x = x.tolist()
     #     new_m_x = [m_x + i for i in x]
     #     new_m_y = [m_y + j for j in y]
-
-
-
     return obj, new_m_x, new_m_y
 
 if __name__ == "__main__":

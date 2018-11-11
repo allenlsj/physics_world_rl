@@ -13,7 +13,17 @@ BALL_RADIUS = 0.25
 BORDER = 0.20
 SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
 
-
+# hyper-parameter
+T = 15
+pd_mode = 2
+state_dim = T*8
+n_actions = 645
+nn_h1 = 150
+nn_h2 = 250
+nn_h3 = 450
+epsilon = 0.5
+epsilon_decay = 0.99
+qlearning_gamma = 0.99 
 #---For demonstration purposes, some random control---
 control_vec = {'obj': np.append(np.repeat(0, 60), np.repeat(1, 180)), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
 # control_vec = {'obj': np.repeat(0, 240), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
