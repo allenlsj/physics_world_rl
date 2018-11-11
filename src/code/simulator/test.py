@@ -9,7 +9,7 @@ new_env = physic_env(cond,mass_list,force_list,T,pd_mode)
 # test 10 time frame:
 #print("*********",self.bodies[0].position[0])
 print("start")
-reward = new_env.step(control_vec)
+state, reward, is_done = new_env.step(0)
 # state = new_env.reset()
 # print(state)
 print(reward)
