@@ -14,7 +14,7 @@ BORDER = 0.20
 SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
 
 # hyper-parameter
-T = 15
+T = 30
 pd_mode = 2
 state_dim = T*8
 n_actions = 645
@@ -24,6 +24,7 @@ nn_h3 = 450
 epsilon = 0.5
 epsilon_decay = 0.99
 qlearning_gamma = 0.99 
+init_mouse = (0,0)
 #---For demonstration purposes, some random control---
 control_vec = {'obj': np.append(np.repeat(0, 60), np.repeat(1, 180)), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
 # control_vec = {'obj': np.repeat(0, 240), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
@@ -60,8 +61,7 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
               [0, 0, 0, -3],
               [-3, 0, -3, 0]],
         'mass':[1,2,1,1],
-        #'timeout': 240
-        'timeout': 80
+        'timeout': 240
     }
 # cond = {'sls':[{'x':1., 'y':1.1}, {'x':2.0, 'y':1.0}, {'x':1.0, 'y':3.0}, {'x':2.0, 'y':3.0}],
 #     'svs':[{'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}],

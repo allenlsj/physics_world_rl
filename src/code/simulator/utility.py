@@ -134,7 +134,6 @@ def simulate(bodies, cond, control_vec, t):
                 bodies[j].ApplyForce(force=f_vec, point=(0,0), wake=True)
         if control_vec['obj'][t]==(i+1):
             bodies[i].linearDamping = 10
-
             c_vec = ( (1/0.19634954631328583) * 0.2*(control_vec['x'][t] - bodies[i].position[0]),
                     (1/0.19634954631328583) * 0.2*(control_vec['y'][t] - bodies[i].position[1]))
             #Apply the force to the object

@@ -16,7 +16,7 @@ from action_generator import generate_action
 
 
 class physic_env():
-    def __init__(self, cond, mass_list, force_list, time_stamp=15, PD_mode=2):
+    def __init__(self, cond, mass_list, force_list, init_mouse, time_stamp, PD_mode):
         # --- pybox2d world setup ---
 
         # Create the world
@@ -25,6 +25,7 @@ class physic_env():
         self.walls = []
         self.data = {}
         self.cond = cond
+        self.init_mouse = init_mouse
         self.add_pucks()
         self.add_static_walls()
         self.mass_list = mass_list
@@ -58,9 +59,9 @@ class physic_env():
                 b.linearVelocity[0]], 'vy': [b.linearVelocity[1]], 'rotation': [b.angle]}
 
         # Add an entry for controlled object's ID (0 none, 1-4 are objects 'o1'--'o4')
-        self.data['co'] = []
+        self.data['co'] = [0]
         # Add an entry for the mouse position
-        self.data['mouse'] = {'x': [], 'y': []}
+        self.data['mouse'] = {'x': [self.init_mouse[0]], 'y': [self.init_mouse[1]]}
 
     # --- add static walls ---
     def add_static_walls(self):
@@ -118,14 +119,11 @@ class physic_env():
 
     def step(self, action_idx):
         obj, mouse_x, mouse_y = generate_action(
-            self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx)
+            self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx, T = self.T)
         control_vec = {'obj': np.repeat(
             obj, self.T), 'x': mouse_x, 'y': mouse_y}
         simulate_state_dic_list = []
         true_state_dic_list = []
-        # current_time
-        current_time = len(self.data['o1']['x'])
-        #print("current time", current_time)
         current_initial_state = store_state(self.bodies)
         for t in range(0, self.T):
             # Update the world
@@ -229,7 +227,12 @@ class physic_env():
             reward = get_reward(true_diff_state, diff_state,
                                 SIGMA, self.PD_mode)
             #mouse_states = [self.data['mouse']['x'][-1],self.data['mouse']['y'][-1]]
-            stop_flag = True
+            # current_time
+            current_time = len(self.data['o1']['x']) - 1
+            if(current_time >= self.cond['timeout']):
+                stop_flag = True
+            else:
+                stop_flag = False
         # return reward
         return states, reward, stop_flag
         # print "****************Rewards************:{}".format(Reward)
