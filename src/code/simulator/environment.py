@@ -11,12 +11,13 @@ import random as rd
 import copy
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, vec2)
 from config import *
-from utility import *
+from utility import gaussian, store_state, simulate
 from action_generator import generate_action
+from information_gain import *
 
 
 class physic_env():
-    def __init__(self, cond, mass_list, force_list, init_mouse, time_stamp, PD_mode):
+    def __init__(self, cond, mass_list, force_list, init_mouse, time_stamp, ig_mode, prior):
         # --- pybox2d world setup ---
 
         # Create the world
@@ -31,7 +32,8 @@ class physic_env():
         self.mass_list = mass_list
         self.force_list = force_list
         self.T = time_stamp
-        self.PD_mode = PD_mode
+        self.ig_mode = ig_mode
+        self.prior = prior
         #self.simulate_state_dic = {}
         #self.true_state_dic = {}
 
@@ -224,8 +226,9 @@ class physic_env():
                 diff_state.append(diff_state_dic)
             # print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
             #wreward,freward = get_reward(true_diff_state,diff_state)
-            reward = get_reward(true_diff_state, diff_state,
-                                SIGMA, self.PD_mode)
+            # reward = get_reward_PD(true_diff_state, diff_state,
+            #                     SIGMA, self.PD_mode)
+            reward, self.prior = get_reward_ig(true_diff_state, diff_state, SIGMA, self.prior, self.ig_mode)
             #mouse_states = [self.data['mouse']['x'][-1],self.data['mouse']['y'][-1]]
             # current_time
             current_time = len(self.data['o1']['x']) - 1

@@ -12,7 +12,7 @@ sess = tf.InteractiveSession()
 keras.backend.set_session(sess)
 
 # initialize the environment
-new_env = physic_env(cond, mass_list, force_list, init_mouse, T, pd_mode)
+new_env = physic_env(cond, mass_list, force_list, init_mouse, T, ig_mode, prior)
 
 def Network(state_dim, n_actions, h1, h2, h3):
     nn = keras.models.Sequential()

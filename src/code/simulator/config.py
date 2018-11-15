@@ -4,7 +4,7 @@
 config.py
 """
 import numpy as np
-from utility import generate_force
+
 # --- Set constants ---
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
@@ -15,7 +15,7 @@ SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
 
 # hyper-parameter
 T = 30
-pd_mode = 2
+ig_mode = 1
 state_dim = T*8
 n_actions = 645
 nn_h1 = 150
@@ -28,6 +28,20 @@ init_mouse = (0,0)
 #---For demonstration purposes, some random control---
 control_vec = {'obj': np.append(np.repeat(0, 60), np.repeat(1, 180)), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
 # control_vec = {'obj': np.repeat(0, 240), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
+
+def generate_force(n,x):
+    a=[0,1,2,3,4,5,6,7,8,9,'A','b','C','D','E','F']
+    b=[]
+    while True:
+        s=n//x
+        y=n%x
+        b=b+[y]
+        if s==0:
+            break
+        n=s
+    b.reverse()
+    return b
+
 mass_list = [[1,1,1,1], [1,2,1,1], [2,1,1,1]]
 
 force_possible =[]
