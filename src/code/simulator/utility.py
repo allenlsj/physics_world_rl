@@ -8,7 +8,7 @@ utility.py
 import numpy as np
 
 #--- Set functions ---
-def gaussian(s, d, Sigma, eta=10):
+def gaussian(s, d, Sigma, eta=1.0/50):
     diff = np.subtract(s,d)
     return np.exp(-eta/2 * np.dot(np.dot(diff.T, np.linalg.inv(Sigma)), diff))
 
@@ -109,6 +109,7 @@ def store_state(bodies):
         local_data[objname]['vy'] = [bodies[i].linearVelocity[1]]
         local_data[objname]['rotation'] = [bodies[i].angle]
     return local_data
+
 def simulate(bodies, cond, control_vec, t):
     #Loop over the dynamic objects
     for i in range(0,len(bodies)):
