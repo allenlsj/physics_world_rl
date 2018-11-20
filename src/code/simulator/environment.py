@@ -49,9 +49,9 @@ class physic_env():
             b.linearVelocity = vec2(
                 self.cond['svs'][i]['x'], self.cond['svs'][i]['y'])
             # Add the the shape 'fixture'
-            circle = b.CreateCircleFixture(radius=BALL_RADIUS,
-                                           density=self.cond['mass'][i],
-                                           friction=0.05, restitution=0.98)
+            # circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+            #                                density=self.cond['mass'][i],
+            #                                friction=0.05, restitution=0.98)
             b.mass = self.cond['mass'][i]
             # Add it to our list of dynamic objects
             self.bodies.append(b)
@@ -151,9 +151,9 @@ class physic_env():
                                              userData={'name': objname, 'bodyType': 'dynamic'})
             b.linearVelocity = vec2(cond['svs'][i]['x'], cond['svs'][i]['y'])
             # Add the the shape 'fixture'
-            circle = b.CreateCircleFixture(radius=BALL_RADIUS,
-                                       density=cond['mass'][i],
-                                       friction=0.05, restitution=0.98)
+            # circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+            #                            density=cond['mass'][i],
+            #                            friction=0.05, restitution=0.98)
             b.mass = cond['mass'][i]
             # Add it to our list of dynamic objects
             bodies.append(b)

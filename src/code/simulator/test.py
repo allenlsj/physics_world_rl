@@ -20,3 +20,4 @@ for i in range(cond['timeout']/T):
 	idx = np.random.randint(0,645)
 	states,reward, is_done = new_env.step(idx)
 	print(is_done)
+	print(reward)
