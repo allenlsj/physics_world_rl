@@ -188,7 +188,7 @@ class physic_env():
             self.data[obj]['vx'] += true_data[obj]['vx']
             self.data[obj]['vy'] += true_data[obj]['vy']
             self.data[obj]['rotation'] += true_data[obj]['rotation']
-        self.data['co'] += control_vec['obj']
+        self.data['co'] += control_vec['obj'].tolist()
         self.data['mouse']['x'] += control_vec['x']
         self.data['mouse']['y'] += control_vec['y']
 
