@@ -63,12 +63,7 @@ def marginalize_posterior(true_dict, est_dict, Sigma, prior, mode):
         
         posterior_marg = [np.sum(post) for post in posterior] # marginalize over force
 
-        new_prior = weighted_sum(posterior)
-        for index, mass in enumerate(mass_list):
-            for index2, force in enumerate(force_list):
-                prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
-
-        return weighted_sum(posterior_marg), prior
+        return weighted_sum(posterior_marg), posterior
 
     elif mode == 'force':
         posterior = []
@@ -84,23 +79,32 @@ def marginalize_posterior(true_dict, est_dict, Sigma, prior, mode):
         
         posterior_marg = [np.sum(post) for post in posterior] # marginalize over mass
 
-        new_prior = weighted_sum(posterior)
-        for index, force in enumerate(force_list):
-            for index2, mass in enumerate(mass_list):
-                prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
-
-        return weighted_sum(posterior_marg), prior
+        return weighted_sum(posterior_marg), posterior
 
 
 def get_reward_ig(true_dict, est_dict, Sigma, prior, mode=1):
     if mode == 1:
-        posterior_mass, prior = marginalize_posterior(true_dict, est_dict, Sigma, prior, 'mass')
+        posterior_mass,posterior = marginalize_posterior(true_dict, est_dict, Sigma, prior, 'mass')
         posterior_ent_mass = entropy(posterior_mass)
         prior_ent_mass = entropy(marginalize_prior(prior, 0))
+        
+        # update prior
+        new_prior = weighted_sum(posterior)
+        for index, mass in enumerate(mass_list):
+            for index2, force in enumerate(force_list):
+                prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
+
         return prior_ent_mass - posterior_ent_mass, prior
+
     elif mode == 2:
-        posterior_force, prior = marginalize_posterior(true_dict, est_dict, Sigma, prior, 'force')
+        posterior_force, posterior = marginalize_posterior(true_dict, est_dict, Sigma, prior, 'force')
         posterior_ent_force = entropy(posterior_force)
         prior_ent_force = entropy(marginalize_prior(prior, 1))
+        
+        # update prior
+        new_prior = weighted_sum(posterior)
+        for index, force in enumerate(force_list):
+            for index2, mass in enumerate(mass_list):
+                prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
         
         return prior_ent_force - posterior_ent_force, prior

@@ -18,6 +18,6 @@ new_env = physic_env(cond,mass_list,force_list,init_mouse,T,ig_mode, prior)
 # test the whole process.
 for i in range(cond['timeout']/T):
 	idx = np.random.randint(0,645)
-	states,reward, is_done = new_env.step(idx)
+	states, reward, is_done = new_env.step(idx)
 	print(is_done)
 	print(reward)

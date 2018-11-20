@@ -3,9 +3,11 @@ sys.path.append('../simulator/')
 from environment import physic_env
 from config import *
 import numpy as np
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import keras
 import keras.layers as L
+import time
 
 tf.reset_default_graph()
 sess = tf.InteractiveSession()
@@ -84,10 +86,19 @@ def train_iteration(t_max, epsilon, train=False):
 
 def train_loop(T_max, t_sess):
     global epsilon
+    rewards = []
     for i in range(T_max):
+        #print(time.localtime())
         epoch_rewards = [train_iteration(t_max=1000, epsilon=epsilon, train=True) for t in range(t_sess)]
+        rewards += epoch_rewards
         print("epoch {}\t mean reward = {:.3f}\t epsilon = {:.3f}".format(i, np.mean(epoch_rewards), epsilon))
         epsilon *= epsilon_decay
+
+        plt.plot(rewards)
+        plt.ylabel("Reward")
+        plt.xlabel("Number of iteration")
+        plt.pause(0.001)
+    plt.show()
 
     return
 
