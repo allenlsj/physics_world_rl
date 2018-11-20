@@ -97,11 +97,10 @@ def get_reward_ig(true_dict, est_dict, Sigma, prior, mode=1):
         posterior_mass, prior = marginalize_posterior(true_dict, est_dict, Sigma, prior, 'mass')
         posterior_ent_mass = entropy(posterior_mass)
         prior_ent_mass = entropy(marginalize_prior(prior, 0))
-
-        return posterior_ent_mass - prior_ent_mass, prior
+        return prior_ent_mass - posterior_ent_mass, prior
     elif mode == 2:
         posterior_force, prior = marginalize_posterior(true_dict, est_dict, Sigma, prior, 'force')
         posterior_ent_force = entropy(posterior_force)
         prior_ent_force = entropy(marginalize_prior(prior, 1))
         
-        return posterior_ent_force - prior_ent_force, prior
+        return prior_ent_force - posterior_ent_force, prior

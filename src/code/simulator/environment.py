@@ -11,10 +11,10 @@ import random as rd
 import copy
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, vec2)
 from config import *
-from utility import gaussian, store_state, simulate
+from utility import gaussian, store_state, simulate,update_simulate_data,generate_trajectory
 from action_generator import generate_action
 from information_gain import *
-
+import time
 
 class physic_env():
     def __init__(self, cond, mass_list, force_list, init_mouse, time_stamp, ig_mode, prior):
@@ -49,21 +49,15 @@ class physic_env():
             b.linearVelocity = vec2(
                 self.cond['svs'][i]['x'], self.cond['svs'][i]['y'])
             # Add the the shape 'fixture'
-            # circle = b.CreateCircleFixture(radius=BALL_RADIUS,
-            #                                density=self.cond['mass'][i],
-            #                                friction=0.05, restitution=0.98)
+            circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+                                           density=self.cond['mass'][i],
+                                           friction=0.05, restitution=0.98)
             b.mass = self.cond['mass'][i]
             # Add it to our list of dynamic objects
             self.bodies.append(b)
             # Add a named entry in the data for this object
-            # init self.data by intial condition
-            self.data[objname] = {'x': [b.position[0]], 'y': [b.position[1]], 'vx': [
-                b.linearVelocity[0]], 'vy': [b.linearVelocity[1]], 'rotation': [b.angle]}
-
-        # Add an entry for controlled object's ID (0 none, 1-4 are objects 'o1'--'o4')
-        self.data['co'] = [0]
-        # Add an entry for the mouse position
-        self.data['mouse'] = {'x': [self.init_mouse[0]], 'y': [self.init_mouse[1]]}
+        # init self.data by intial condition
+        self.data = self.initial_data(self.bodies)
 
     # --- add static walls ---
     def add_static_walls(self):
@@ -88,159 +82,7 @@ class physic_env():
             box=(BORDER, HEIGHT / 2)), friction=0.05, restitution=0.98)
         self.walls.append(w)
 
-    def generate_states(self, cond, control_vec, t):
-        bodies = []
-        for i in range(0, len(cond['sls'])):
-                # Give each a unique name
-            objname = 'o' + str(i + 1)
-            # Create the body
-            b = self.world.CreateDynamicBody(position=(cond['sls'][i]['x'], cond['sls'][i]['y']),
-                                             linearDamping=0.05, fixedRotation=True,
-                                             userData={'name': objname, 'bodyType': 'dynamic'})
-            b.linearVelocity = vec2(cond['svs'][i]['x'], cond['svs'][i]['y'])
-            # Add the the shape 'fixture'
-            # circle = b.CreateCircleFixture(radius=BALL_RADIUS,
-            #                            density=cond['mass'][i],
-            #                            friction=0.05, restitution=0.98)
-            b.mass = cond['mass'][i]
-            # Add it to our list of dynamic objects
-            bodies.append(b)
-        bodies = simulate(bodies, cond, control_vec, t)
-        # print(t,"===============",bodies[0].position)
-        # Update the world
-        self.world.Step(TIME_STEP, 3, 3)
-        # Remove any forces applied at the previous timepoint (these will be recalculated and reapplied below)
-        self.world.ClearForces()
-        # print(t,"~~~~~~~~~~~~~~~~",bodies[0].position)
-        # Store the position and velocity of object i
-        local_data = store_state(bodies)
-        # Turned off all rotation but could include if we want
-        bodies[i].angularVelocity = 0
-        bodies[i].angle = 0
-        return local_data
-
-    def step(self, action_idx):
-        obj, mouse_x, mouse_y = generate_action(
-            self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx, T = self.T)
-        control_vec = {'obj': np.repeat(
-            obj, self.T), 'x': mouse_x, 'y': mouse_y}
-        simulate_state_dic_list = []
-        true_state_dic_list = []
-        current_initial_state = store_state(self.bodies)
-        for t in range(0, self.T):
-            # Update the world
-            # self.world.Step(TIME_STEP, 3, 3)
-            # self.world.ClearForces()
-            # print("^^^",t,self.bodies[0].position[0])
-            # Simulate
-            # print(t)
-            simulate_state_dic = {}
-            true_state_dic = {}
-            for m in self.mass_list:
-                for f in self.force_list:
-                    cond = self.update_condition(m, f)
-                    simulate_state_dic[(tuple(m), tuple(
-                        np.array(f).flatten()))] = self.generate_states(cond, control_vec, t)
-                    #data = copy.deepcopy(self.data)
-            simulate_state_dic_list.append(simulate_state_dic)
-
-            #data = self.data
-            # Loop over the dynamic objects
-            bodies = simulate(self.bodies, self.cond, control_vec, t)
-            self.world.Step(TIME_STEP, 3, 3)
-            self.world.ClearForces()
-
-            for i in range(0, len(bodies)):
-                objname = bodies[i].userData['name']
-                # Store the position and velocity of object i
-                self.data[objname]['x'].append(bodies[i].position[0])
-                self.data[objname]['y'].append(bodies[i].position[1])
-                self.data[objname]['vx'].append(bodies[i].linearVelocity[0])
-                self.data[objname]['vy'].append(bodies[i].linearVelocity[1])
-                self.data[objname]['rotation'].append(bodies[i].angle)
-
-                # Turned off all rotation but could include if we want
-                self.bodies[i].angularVelocity = 0
-                self.bodies[i].angle = 0
-            # Store the target of the controller (i.e. is one of the objects selected?)
-            # And the current position of the controller (i.e. mouse)
-            self.data['co'].append(control_vec['obj'][t])
-            self.data['mouse']['x'].append(control_vec['x'][t])
-            self.data['mouse']['y'].append(control_vec['y'][t])
-            true_state_dic[(tuple(cond['mass']), tuple(
-                np.array(cond['lf']).flatten()))] = store_state(bodies)
-            #import ipdb;ipdb.set_trace()
-            true_state_dic_list.append(true_state_dic)
-            # print("&&&&&&&&&&&&&&",true_state_dic)
-        if(simulate_state_dic_list):
-            diff_state = []
-            true_diff_state = []
-            states = []
-            # change: from t to t+9
-            for time in range(0, self.T):
-                diff_state_dic = {}
-                true_diff_state_dic = {}
-                for key in true_state_dic_list[0]:
-                    true_diff_obj_dic = {}
-                    if(time == 0):
-                        old_state = current_initial_state
-                    else:
-                        old_state = true_state_dic_list[time - 1][key]
-                    for obj in ['o1', 'o2', 'o3', 'o4']:
-                        true_diff_r_theta = {}
-                        current_state = true_state_dic_list[time][key][obj]
-                        # if(obj == 'o1'):
-                        # 	print(time,"#################true current state",old_state[obj]['x'][-1],current_state['x'][-1])
-                        r = np.sqrt((current_state['x'][-1] - old_state[obj]['x'][-1])**2 + (
-                            current_state['y'][-1] - old_state[obj]['y'][-1])**2)
-                        theta = current_state['rotation'][-1] - \
-                            old_state[obj]['rotation'][-1]
-                        theta = theta + 2 * np.pi if theta < 0 else theta
-                        # add (r,theta) to state list
-                        states.append(r)
-                        states.append(theta)
-                        # add (r,theta) to state dictionary for reward function
-                        true_diff_r_theta['r'] = r
-                        true_diff_r_theta['rotation'] = theta
-                        true_diff_obj_dic[obj] = true_diff_r_theta
-                    true_diff_state_dic[key] = true_diff_obj_dic
-                true_diff_state.append(true_diff_state_dic)
-
-                for key in simulate_state_dic_list[0]:
-                    diff_obj_dic = {}
-                    for obj in ['o1', 'o2', 'o3', 'o4']:
-                        diff_r_theta = {}
-                        current_state = simulate_state_dic_list[time][key][obj]
-                        # if(obj== 'o1'):
-                        # 	print(time,"*********simulate current state",old_state[obj]['x'][-1],current_state['x'][-1])
-                        diff_r_theta['r'] = np.sqrt((current_state['x'][-1] - old_state[obj]['x'][-1])**2 + (
-                            current_state['y'][-1] - old_state[obj]['y'][-1])**2)
-                        diff_r_theta['rotation'] = current_state['rotation'][-1] - \
-                            old_state[obj]['rotation'][-1]
-                        diff_r_theta['rotation'] = diff_r_theta['rotation'] + 2 * \
-                            np.pi if diff_r_theta['rotation'] < 0 else diff_r_theta['rotation']
-                        diff_obj_dic[obj] = diff_r_theta
-                    diff_state_dic[key] = diff_obj_dic
-                    #print("simulate diff ",diff_obj_dic)
-                    #print("*********simulate current state",current_state[time][key]['o1'])
-                diff_state.append(diff_state_dic)
-            # print "****************Rewards************:{}".format(get_reward(true_diff_state,diff_state))
-            #wreward,freward = get_reward(true_diff_state,diff_state)
-            # reward = get_reward_PD(true_diff_state, diff_state,
-            #                     SIGMA, self.PD_mode)
-            reward, self.prior = get_reward_ig(true_diff_state, diff_state, SIGMA, self.prior, self.ig_mode)
-            #mouse_states = [self.data['mouse']['x'][-1],self.data['mouse']['y'][-1]]
-            # current_time
-            current_time = len(self.data['o1']['x']) - 1
-            if(current_time >= self.cond['timeout']):
-                stop_flag = True
-            else:
-                stop_flag = False
-        # return reward
-        return states, reward, stop_flag
-        # print "****************Rewards************:{}".format(Reward)
-
-    def update_condition(self, m, f):
+    def update_condition(self,m=None,f=None):
         cond = {}
         loc_list = []
         vel_list = []
@@ -251,8 +93,9 @@ class physic_env():
                 {'x': self.data[obj]['vx'][-1], 'y': self.data[obj]['vy'][-1]})
         cond['sls'] = loc_list
         cond['svs'] = vel_list
-        cond['mass'] = m
-        cond['lf'] = f
+        if(type(m) and type(f)):
+            cond['mass'] = m
+            cond['lf'] = f
         return cond
 
     def reset(self):
@@ -294,3 +137,111 @@ class physic_env():
         self.data['mouse']['y'].append(control_vec['y'][t])
         #print(len(true_state_list))
         return true_state_list
+    def initial_simulate(self, cond, control_vec):
+        '''
+        generate simulated bodies and initialize them with intial condition(m,f) and control
+        '''
+        bodies = []
+        for i in range(0, len(cond['sls'])):
+                # Give each a unique name
+            objname = 'o' + str(i + 1)
+            # Create the body
+            b = self.world.CreateDynamicBody(position=(cond['sls'][i]['x'], cond['sls'][i]['y']),
+                                             linearDamping=0.05, fixedRotation=True,
+                                             userData={'name': objname, 'bodyType': 'dynamic'})
+            b.linearVelocity = vec2(cond['svs'][i]['x'], cond['svs'][i]['y'])
+            # Add the the shape 'fixture'
+            circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+                                       density=cond['mass'][i],
+                                       friction=0.05, restitution=0.98)
+            b.mass = cond['mass'][i]
+            # Add it to our list of dynamic objects
+            bodies.append(b)
+        local_data = self.initial_data()
+        return bodies,local_data
+
+    def initial_data(self,bodies = None,init_mouse = None):
+        local_data = {}
+        if(bodies==None):
+            for i in range(0,len(self.bodies)):
+                objname = 'o' + str(i + 1)
+                local_data[objname] = {'x': [], 'y': [], 'vx': [], 'vy': [], 'rotation': []}
+            local_data['co'] = []
+            local_data['mouse'] = []
+        else:
+            # initialize data by specified bodies and init_mouse
+            for i in range(0,len(bodies)):
+                objname = 'o' + str(i + 1)
+                local_data[objname] = {'x': [bodies[i].position[0]], 'y': [bodies[i].position[1]], 'vx': [
+                        bodies[i].linearVelocity[0]], 'vy': [bodies[i].linearVelocity[1]], 'rotation': [bodies[i].angle]}
+            local_data['co'] = [0]
+            if(init_mouse):
+                local_data['mouse'] = {'x': [init_mouse[0]], 'y': [init_mouse[1]]}
+            else:
+                local_data['mouse'] = {'x': [self.init_mouse[0]], 'y': [self.init_mouse[1]]}
+        return local_data
+
+    def update_data(self,true_data,control_vec):
+        for obj in ['o1', 'o2', 'o3', 'o4']:
+            self.data[obj]['x'] += true_data[obj]['x']
+            self.data[obj]['y'] += true_data[obj]['y']
+            self.data[obj]['vx'] += true_data[obj]['vx']
+            self.data[obj]['vy'] += true_data[obj]['vy']
+            self.data[obj]['rotation'] += true_data[obj]['rotation']
+        self.data['co'] += control_vec['obj']
+        self.data['mouse']['x'] += control_vec['x']
+        self.data['mouse']['y'] += control_vec['y']
+
+    
+    def update_simulate_bodies(self,bodies,cond,control_vec,t,local_data):
+        bodies = simulate(bodies, cond, control_vec, t)
+        self.world.Step(TIME_STEP, 3, 3)
+        self.world.ClearForces()
+        local_data = update_simulate_data(local_data,bodies)
+        return bodies,local_data
+
+
+    def step(self, action_idx):
+        obj, mouse_x, mouse_y = generate_action(
+            self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx, T = self.T)
+        control_vec = {'obj': np.repeat(
+            obj, self.T), 'x': mouse_x, 'y': mouse_y}
+        # initial true case
+        true_key = (tuple(self.cond['mass']), tuple(np.array(self.cond['lf']).flatten()))
+        true_data = {true_key: self.initial_data()}
+
+        simulate_bodies = {}
+        simulate_data = {}
+        # correct simulated trajectory to true trajectory
+        current_cond = self.update_condition()
+        for t in range(0, self.T):
+            simulate_state_dic = {}
+            true_state_dic = {}
+            # Simulate Cases
+            idx = 0
+            #print("begin simulate bodies",t,time.strftime("%H:%M:%S", time.localtime()))
+            for m in self.mass_list:
+                for f in self.force_list:
+                    idx += 1
+                    current_cond['mass'] = m
+                    current_cond['lf'] = f
+                    key = (tuple(m), tuple(np.array(f).flatten()))
+                    if(t == 0):
+                        simulate_bodies[key], simulate_data[key] = self.initial_simulate(current_cond, control_vec)
+                    #print("simulate bodies",t,idx,time.strftime("%H:%M:%S", time.localtime()))
+                    simulate_bodies[key],simulate_data[key] = self.update_simulate_bodies(simulate_bodies[key],current_cond,control_vec,t,simulate_data[key])
+            #print("true bodies",t,time.strftime("%H:%M:%S", time.localtime()))
+            # True Case
+            self.bodies,true_data[true_key] = self.update_simulate_bodies(self.bodies,self.cond, control_vec, t,true_data[true_key])
+        # Synchronize self.data to keep track of all steps from beginning to end
+        self.update_data(true_data[true_key],control_vec)
+        true_trace, states = generate_trajectory(true_data,True)
+        simulate_trace, _ = generate_trajectory(simulate_data,False)
+        reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode)
+        current_time = len(self.data['o1']['x']) - 1
+        if(current_time >= self.cond['timeout']):
+            stop_flag = True
+        else:
+            stop_flag = False
+        return states, reward, stop_flag
+

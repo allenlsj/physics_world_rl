@@ -142,5 +142,32 @@ def simulate(bodies, cond, control_vec, t):
             if t!=(len(control_vec['obj'])-1):
                 if control_vec['obj'][t+1]==0:
                     bodies[i].linearDamping = 0.05
+        # Turned off all rotation but could include if we want
+        bodies[i].angularVelocity = 0
+        bodies[i].angle = 0
     return bodies
-
+def update_simulate_data(local_data,bodies):
+    for i in range(0,len(bodies)):
+        objname = 'o' + str(i + 1)
+        local_data[objname]['x'].append(bodies[i].position[0])
+        local_data[objname]['y'].append(bodies[i].position[1])
+        local_data[objname]['vx'].append(bodies[i].linearVelocity[0])
+        local_data[objname]['vy'].append(bodies[i].linearVelocity[1])
+        local_data[objname]['rotation'].append(bodies[i].angle)
+    return local_data
+def generate_trajectory(data,flag):
+    trajectory = {}
+    states = []
+    for key in data:
+        dict_r_theta = {}
+        for obj in ['o1', 'o2', 'o3', 'o4']:
+            vx = np.array(data[key][obj]['vx'])
+            vy = np.array(data[key][obj]['vy'])
+            r = np.sqrt(vx**2+vy**2)
+            theta = np.arctan2(vy,vx)
+            theta[theta<0] += 2 * np.pi
+            if(flag):
+                states += list(np.vstack([r,theta]).transpose().flatten())
+            dict_r_theta[obj] = {'r':list(r),'rotation':list(theta)}
+        trajectory[key] = dict_r_theta
+    return trajectory,list(states)
