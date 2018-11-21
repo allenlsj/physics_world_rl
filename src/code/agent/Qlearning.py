@@ -14,9 +14,6 @@ tf.reset_default_graph()
 sess = tf.InteractiveSession()
 keras.backend.set_session(sess)
 
-# initialize the environment
-new_env = physic_env(cond, mass_list, force_list, init_mouse, T, ig_mode, prior)
-
 def Network(state_dim, n_actions, h1, h2, h3):
     nn = keras.models.Sequential()
     nn.add(L.InputLayer((state_dim,)))
@@ -106,9 +103,13 @@ def train_loop(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='training q-function approximator')
     parser.add_argument('--epochs', type=int, action='store', help='number of epoches to train', default=1000)
+    parser.add_argument('--mode', type=int, action='store', help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
     parser.add_argument('--sessions', type=int, action='store', help='number of sessions to train per epoch', default=10)
 
     args = parser.parse_args()
     print(args)
 
+    # initialize the environment
+    new_env = physic_env(cond, mass_list, force_list, init_mouse, T, args.mode, prior)
+    # train
     train_loop(args)

@@ -73,7 +73,7 @@ def marginalize_posterior(true_dict, est_dict, Sigma, prior, mode):
             for j in mass_list:
                 ll.append(get_likelihood(true_dict, est_dict[tuple(
                     j), tuple(np.array(i).flatten())], Sigma))
-                prior_mass.append(prior[tuple(
+                prior_force.append(prior[tuple(
                     j), tuple(np.array(i).flatten())])
             posterior.append([ll[k]*prior_force[k] for k in range(len(mass_list))])
         
@@ -108,3 +108,6 @@ def get_reward_ig(true_dict, est_dict, Sigma, prior, mode=1):
                 prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
         
         return prior_ent_force - posterior_ent_force, prior
+
+    else:
+        raise ValueError("Cannot recognize input mode value. Currently only support 1 (for mass) and 2 (for force)")
