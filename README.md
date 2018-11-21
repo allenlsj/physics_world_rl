@@ -8,3 +8,22 @@ Develop a python port of simulation environment based on pybox2D to test control
 
 ## On-going second phase
 Once the python-versioned environment simulator set up, we will try to formulate an appropriate reinforcement learning modeling framework to learn and optimize human actions behind the scenes. Since the state transition matrix is unknown, and the state-space and the action space are continuous, we tend to start with a model-free based RL model(controller) to output optimal actions. Noticed that our goal is to explore whether people’s actions are generally effective at reducing uncertainty about the specific parameters of the scene they are asked about. To approximate those structured learning behaviours within an unstructured environment, we may add an adversarial network to challenge our controller. We also want to utilize several generative functions/models to mimic human-level behaviors. We will mainly follow the ideas presented in these papers: [paper1](https://arxiv.org/pdf/1802.07442.pdf), [paper2](http://people.idsia.ch/~juergen/ieeecreative.pdf), [paper3](https://web.mit.edu/cocosci/Papers/Science-2015-Lake-1332-8.pdf), [paper4](http://papers.nips.cc/paper/6705-question-asking-as-program-generation.pdf) with our adaptive modifications.
+
+### Dependencies
+* **Python 2.7**
+* **numpy/scipy**
+* **tensorflow 1.12.0+**
+* **keras 2.2.4+**
+* **[pybox2d](https://github.com/pybox2d/pybox2d)**
+
+### Training
+If you'd like to train your models, you will first need to download this repository and move to the agent directory:
+```bash
+$ git clone https://github.com/allenlsj/physics_world_rl
+$ cd physics_world_rl/src/code/agent
+```
+To train a q-value function approximator, simply execute the following commend:
+```bash
+$ python2 Qlearning.py --epochs 1000 --mode 1 --sessions 10
+```
+for 1000 epochs and 10 iteration of games per epoch. The `mode` arguement stands for the type of intinsic reward returned by the simulator, where 1 is for `mass` and 2 is for `force`. Feel free to use `python2 Qlearning.py --h` for more information regarding the input arguments.
