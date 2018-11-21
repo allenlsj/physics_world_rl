@@ -1,5 +1,6 @@
 import sys
 sys.path.append('../simulator/')
+import argparse
 from environment import physic_env
 from config import *
 import numpy as np
@@ -67,6 +68,7 @@ class q_agent:
 train_step = tf.train.AdamOptimizer(1e-4).minimize(q_agent.loss)
 
 def train_iteration(t_max, epsilon, train=False):
+    #print(time.strftime("%H:%M:%S", time.localtime()))
     total_reward = 0
     s = new_env.reset()
 
@@ -84,12 +86,11 @@ def train_iteration(t_max, epsilon, train=False):
 
     return total_reward
 
-def train_loop(T_max, t_sess):
+def train_loop(args):
     global epsilon
     rewards = []
-    for i in range(T_max):
-        #print(time.localtime())
-        epoch_rewards = [train_iteration(t_max=1000, epsilon=epsilon, train=True) for t in range(t_sess)]
+    for i in range(args.epochs):
+        epoch_rewards = [train_iteration(t_max=1000, epsilon=epsilon, train=True) for t in range(args.sessions)]
         rewards += epoch_rewards
         print("epoch {}\t mean reward = {:.3f}\t epsilon = {:.3f}".format(i, np.mean(epoch_rewards), epsilon))
         epsilon *= epsilon_decay
@@ -103,4 +104,11 @@ def train_loop(T_max, t_sess):
     return
 
 if __name__ == "__main__":
-    train_loop(1000, 10)
+    parser = argparse.ArgumentParser(description='training q-function approximator')
+    parser.add_argument('--epochs', type=int, action='store', help='number of epoches to train', default=1000)
+    parser.add_argument('--sessions', type=int, action='store', help='number of sessions to train per epoch', default=10)
+
+    args = parser.parse_args()
+    print(args)
+
+    train_loop(args)

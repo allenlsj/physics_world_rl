@@ -103,40 +103,16 @@ class physic_env():
         self.bodies = []
         self.data = {}
         self.add_pucks()
-        true_state_list = []
         control_vec = {'obj': np.repeat(0, time_stamp), 'x': np.repeat(
             3, time_stamp), 'y': np.repeat(3, time_stamp)}
+        true_key = (tuple(self.cond['mass']), tuple(np.array(self.cond['lf']).flatten()))
+        true_data = {true_key: self.initial_data()}
         for t in range(0, time_stamp):
-            self.world.Step(TIME_STEP, 3, 3)
-            self.world.ClearForces()
-            # print(self.bodies[0].position[0])
-            bodies = simulate(self.bodies, self.cond, control_vec, t)
-            for i in range(0, len(bodies)):
-                objname = bodies[i].userData['name']
-                r = np.sqrt((bodies[i].position[0] - self.data[objname]['x'][-1])
-                            ** 2 + (bodies[i].position[1] - self.data[objname]['y'][-1])**2)
-                # print("^^^",r)
-                theta = bodies[i].angle - self.data[objname]['rotation'][-1]
-                theta = theta + 2 * np.pi if theta < 0 else theta
-                true_state_list.append(r)
-                true_state_list.append(theta)
-                self.data[objname]['x'].append(bodies[i].position[0])
-                self.data[objname]['y'].append(bodies[i].position[1])
-                self.data[objname]['vx'].append(bodies[i].linearVelocity[0])
-                self.data[objname]['vy'].append(bodies[i].linearVelocity[1])
-                self.data[objname]['rotation'].append(bodies[i].angle)
+            self.bodies,true_data[true_key] = self.update_simulate_bodies(self.bodies,self.cond, control_vec, t,true_data[true_key])
+        self.update_data(true_data[true_key],control_vec)
+        _, states = generate_trajectory(true_data,True)
+        return states
 
-                # Turned off all rotation but could include if we want
-                self.bodies[i].angularVelocity = 0
-                self.bodies[i].angle = 0
-
-        # Store the target of the controller (i.e. is one of the objects selected?)
-        # And the current position of the controller (i.e. mouse)
-        self.data['co'].append(control_vec['obj'][t])
-        self.data['mouse']['x'].append(control_vec['x'][t])
-        self.data['mouse']['y'].append(control_vec['y'][t])
-        #print(len(true_state_list))
-        return true_state_list
     def initial_simulate(self, cond, control_vec):
         '''
         generate simulated bodies and initialize them with intial condition(m,f) and control
@@ -189,8 +165,8 @@ class physic_env():
             self.data[obj]['vy'] += true_data[obj]['vy']
             self.data[obj]['rotation'] += true_data[obj]['rotation']
         self.data['co'] += control_vec['obj'].tolist()
-        self.data['mouse']['x'] += control_vec['x']
-        self.data['mouse']['y'] += control_vec['y']
+        self.data['mouse']['x'] += control_vec['x'].tolist()
+        self.data['mouse']['y'] += control_vec['y'].tolist()
 
     
     def update_simulate_bodies(self,bodies,cond,control_vec,t,local_data):
@@ -205,7 +181,7 @@ class physic_env():
         obj, mouse_x, mouse_y = generate_action(
             self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx, T = self.T)
         control_vec = {'obj': np.repeat(
-            obj, self.T), 'x': mouse_x, 'y': mouse_y}
+            obj, self.T), 'x': np.array(mouse_x), 'y': np.array(mouse_y)}
         # initial true case
         true_key = (tuple(self.cond['mass']), tuple(np.array(self.cond['lf']).flatten()))
         true_data = {true_key: self.initial_data()}
