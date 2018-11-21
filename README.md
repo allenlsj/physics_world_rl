@@ -24,6 +24,6 @@ $ cd physics_world_rl/src/code/agent
 ```
 To train a q-value function approximator, simply execute the following commend:
 ```bash
-python2 Qlearning.py --epochs 1000 --sessions 10
+$ python2 Qlearning.py --epochs 1000 --mode 1 --sessions 10
 ```
-for 1000 epochs and 10 iteration of games per epoch.
+for 1000 epochs and 10 iteration of games per epoch. The `mode` arguement stands for the type of intinsic reward returned by the simulator, where 1 is for `mass` and 2 is for `force`. Feel free to use `python2 Qlearning.py --h` for more information regarding the input arguments.
