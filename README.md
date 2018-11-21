@@ -20,7 +20,7 @@ Once the python-versioned environment simulator set up, we will try to formulate
 If you'd like to train your models, you will first need to download this repository and move to the agent directory:
 ```bash
 $ git clone https://github.com/allenlsj/physics_world_rl
-$ cd physics_world_rl/src/code/agent; 
+$ cd physics_world_rl/src/code/agent
 ```
 To train a q-value function approximator, simply execute the following commend:
 ```bash
