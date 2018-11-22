@@ -28,7 +28,7 @@ $ python2 Qlearning.py --mode 1
 ```
 for 1000 epochs and 10 iteration of games per epoch. The `mode` arguement stands for the type of intinsic reward returned by the simulator, where 1 is for `mass` and 2 is for `force`. Feel free to use `python2 Qlearning.py --h` for more information regarding the other input arguments.
 
-Similary, if you want to train your q-agent with a target network to check if the instability issue is reduced, use:
+Similarly, if you want to train your q-agent with a target network to check if the instability issue is reduced, use:
 ```bash
-$ python2 Qagent.py --mode 1
+$ python2 Qagent.py --mode [1 or 2 depends on your need]
 ```
