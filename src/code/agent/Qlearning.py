@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Qlearning.py
+"""
 import sys
 sys.path.append('../simulator/')
 import argparse
