@@ -22,8 +22,13 @@ If you'd like to train your models, you will first need to download this reposit
 $ git clone https://github.com/allenlsj/physics_world_rl
 $ cd physics_world_rl/src/code/agent
 ```
-To train a q-value function approximator, simply execute the following commend:
+To train a q-value function approximator with standard semi-gradient update, simply execute the following commend:
 ```bash
-$ python2 Qlearning.py --epochs 1000 --mode 1 --sessions 10
+$ python2 Qlearning.py --mode 1
 ```
-for 1000 epochs and 10 iteration of games per epoch. The `mode` arguement stands for the type of intinsic reward returned by the simulator, where 1 is for `mass` and 2 is for `force`. Feel free to use `python2 Qlearning.py --h` for more information regarding the input arguments.
+for 1000 epochs and 10 iteration of games per epoch. The `mode` arguement stands for the type of intinsic reward returned by the simulator, where 1 is for `mass` and 2 is for `force`. Feel free to use `python2 Qlearning.py --h` for more information regarding the other input arguments.
+
+Similary, if you want to train your q-agent with a target network to check if the instability issue is reduced, use:
+```bash
+$ python2 Qagent.py --mode 1
+```
