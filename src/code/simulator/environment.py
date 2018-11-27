@@ -11,7 +11,7 @@ import random as rd
 import copy
 from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, vec2)
 from config import *
-from utility import gaussian, store_state, simulate,update_simulate_data,generate_trajectory
+from utility import gaussian, store_state ,generate_trajectory
 from action_generator import generate_action
 from information_gain import *
 import time
@@ -34,6 +34,7 @@ class physic_env():
         self.T = time_stamp
         self.ig_mode = ig_mode
         self.prior = prior
+        self.PRIOR = prior
         #self.simulate_state_dic = {}
         #self.true_state_dic = {}
 
@@ -49,9 +50,9 @@ class physic_env():
             b.linearVelocity = vec2(
                 self.cond['svs'][i]['x'], self.cond['svs'][i]['y'])
             # Add the the shape 'fixture'
-            # circle = b.CreateCircleFixture(radius=BALL_RADIUS,
-            #                                density=self.cond['mass'][i],
-            #                                friction=0.05, restitution=0.98)
+            circle = b.CreateCircleFixture(radius=BALL_RADIUS,
+                                           density=self.cond['mass'][i],
+                                           friction=0.05, restitution=0.98)
             b.mass = self.cond['mass'][i]
             # Add it to our list of dynamic objects
             self.bodies.append(b)
@@ -100,41 +101,15 @@ class physic_env():
 
     def reset(self):
         time_stamp = self.T
-        self.bodies = []
-        self.data = {}
-        self.add_pucks()
+        self.update_bodies(self.cond)
         control_vec = {'obj': np.repeat(0, time_stamp), 'x': np.repeat(
-            3, time_stamp), 'y': np.repeat(3, time_stamp)}
+            self.init_mouse[0], time_stamp), 'y': np.repeat(self.init_mouse[1], time_stamp)}
         true_key = (tuple(self.cond['mass']), tuple(np.array(self.cond['lf']).flatten()))
-        true_data = {true_key: self.initial_data()}
-        for t in range(0, time_stamp):
-            self.bodies,true_data[true_key] = self.update_simulate_bodies(self.bodies,self.cond, control_vec, t,true_data[true_key])
-        self.update_data(true_data[true_key],control_vec)
+        true_data = {true_key: self.simulate_in_all(self.cond, control_vec)}
+        self.data = self.initial_data(self.bodies)
         _, states = generate_trajectory(true_data,True)
+        self.prior = self.PRIOR
         return states
-
-    def initial_simulate(self, cond, control_vec):
-        '''
-        generate simulated bodies and initialize them with intial condition(m,f) and control
-        '''
-        bodies = []
-        for i in range(0, len(cond['sls'])):
-                # Give each a unique name
-            objname = 'o' + str(i + 1)
-            # Create the body
-            b = self.world.CreateDynamicBody(position=(cond['sls'][i]['x'], cond['sls'][i]['y']),
-                                             linearDamping=0.05, fixedRotation=True,
-                                             userData={'name': objname, 'bodyType': 'dynamic'})
-            b.linearVelocity = vec2(cond['svs'][i]['x'], cond['svs'][i]['y'])
-            # Add the the shape 'fixture'
-            # circle = b.CreateCircleFixture(radius=BALL_RADIUS,
-            #                            density=cond['mass'][i],
-            #                            friction=0.05, restitution=0.98)
-            b.mass = cond['mass'][i]
-            # Add it to our list of dynamic objects
-            bodies.append(b)
-        local_data = self.initial_data()
-        return bodies,local_data
 
     def initial_data(self,bodies = None,init_mouse = None):
         local_data = {}
@@ -146,6 +121,7 @@ class physic_env():
             local_data['mouse'] = []
         else:
             # initialize data by specified bodies and init_mouse
+            # for self.data
             for i in range(0,len(bodies)):
                 objname = 'o' + str(i + 1)
                 local_data[objname] = {'x': [bodies[i].position[0]], 'y': [bodies[i].position[1]], 'vx': [
@@ -168,47 +144,93 @@ class physic_env():
         self.data['mouse']['x'] += control_vec['x'].tolist()
         self.data['mouse']['y'] += control_vec['y'].tolist()
 
-    
-    def update_simulate_bodies(self,bodies,cond,control_vec,t,local_data):
-        bodies = simulate(bodies, cond, control_vec, t)
+    def update_simulate_data(self,local_data):
+        for i in range(0,len(self.bodies)):
+            objname = 'o' + str(i + 1)
+            local_data[objname]['x'].append(self.bodies[i].position[0])
+            local_data[objname]['y'].append(self.bodies[i].position[1])
+            local_data[objname]['vx'].append(self.bodies[i].linearVelocity[0])
+            local_data[objname]['vy'].append(self.bodies[i].linearVelocity[1])
+            local_data[objname]['rotation'].append(self.bodies[i].angle)
+        return local_data
+
+    def simulate(self, cond, control_vec, t):
+        #Loop over the dynamic objects
+        for i in range(0,len(self.bodies)):
+            #Grab and print current object name and location
+            objname = self.bodies[i].userData['name']
+            #Apply local forces
+            for j in range(0, len(self.bodies)):
+                #NB: The force strengths should be symmetric i,j==j,i for normal physics
+                #otherwise you'll get "chasing" behaviour
+                strength = cond['lf'][i][j]
+                #If there's a pairwise interaction between these two objects...
+                if strength!=0 and i!=j:
+                    #Calculate its force based on the objects masses and distances
+                    m = self.bodies[i].mass * self.bodies[j].mass
+                    d = ((self.bodies[i].position[0] - self.bodies[j].position[0])**2 +
+                        (self.bodies[i].position[1] - self.bodies[j].position[1])**2)**0.5
+
+                    angle = np.arctan2(self.bodies[i].position[1] - self.bodies[j].position[1],
+                                self.bodies[i].position[0] - self.bodies[j].position[0])
+                    f_mag = (strength * m) / d**2
+                    f_vec = (f_mag * np.cos(angle), f_mag * np.sin(angle))
+                    #Apply the force to the object
+                    self.bodies[j].ApplyForce(force=f_vec, point=(0,0), wake=True)
+            if control_vec['obj'][t]==(i+1):
+                self.bodies[i].linearDamping = 10
+                c_vec = ( (1/0.19634954631328583) * 0.2*(control_vec['x'][t] - self.bodies[i].position[0]),
+                        (1/0.19634954631328583) * 0.2*(control_vec['y'][t] - self.bodies[i].position[1]))
+                #Apply the force to the object
+                self.bodies[i].ApplyLinearImpulse(impulse=c_vec, point=(0,0), wake=True)
+                if t!=(len(control_vec['obj'])-1):
+                    if control_vec['obj'][t+1]==0:
+                        self.bodies[i].linearDamping = 0.05
+            # Turned off all rotation but could include if we want
+            self.bodies[i].angularVelocity = 0
+            self.bodies[i].angle = 0
+
+    def update_simulate_bodies(self,cond,control_vec,t,local_data):
+        self.simulate(cond, control_vec, t)
         self.world.Step(TIME_STEP, 3, 3)
         self.world.ClearForces()
-        local_data = update_simulate_data(local_data,bodies)
-        return bodies,local_data
+        local_data = self.update_simulate_data(local_data)
+        return local_data
 
+    def simulate_in_all(self, cond,control_vec):
+        local_data = self.initial_data()
+        for t in range(0, self.T):
+            local_data = self.update_simulate_bodies(cond, control_vec,t,local_data)
+        return local_data
+
+    def update_bodies(self,cond):
+        for i in range(0, len(cond['sls'])):
+            objname = 'o' + str(i + 1)
+            self.bodies[i].position = (cond['sls'][i]['x'], cond['sls'][i]['y'])
+            self.bodies[i].linearDamping = 0.05
+            self.bodies[i].linearVelocity = vec2(cond['svs'][i]['x'], cond['svs'][i]['y'])
+            self.bodies[i].mass = cond['mass'][i]
+            self.bodies[i].fixtures[0].density = cond['mass'][i]
 
     def step(self, action_idx):
         obj, mouse_x, mouse_y = generate_action(
             self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx, T = self.T)
         control_vec = {'obj': np.repeat(
             obj, self.T), 'x': np.array(mouse_x), 'y': np.array(mouse_y)}
-        # initial true case
+        current_cond = self.update_condition(self.cond['mass'],self.cond['lf'])
+        # true case
         true_key = (tuple(self.cond['mass']), tuple(np.array(self.cond['lf']).flatten()))
-        true_data = {true_key: self.initial_data()}
-
-        simulate_bodies = {}
+        true_data = {true_key: self.simulate_in_all(current_cond, control_vec)}
+        # simulate case
         simulate_data = {}
-        # correct simulated trajectory to true trajectory
-        current_cond = self.update_condition()
-        for t in range(0, self.T):
-            simulate_state_dic = {}
-            true_state_dic = {}
-            # Simulate Cases
-            idx = 0
-            #print("begin simulate bodies",t,time.strftime("%H:%M:%S", time.localtime()))
-            for m in self.mass_list:
-                for f in self.force_list:
-                    idx += 1
-                    current_cond['mass'] = m
-                    current_cond['lf'] = f
-                    key = (tuple(m), tuple(np.array(f).flatten()))
-                    if(t == 0):
-                        simulate_bodies[key], simulate_data[key] = self.initial_simulate(current_cond, control_vec)
-                    #print("simulate bodies",t,idx,time.strftime("%H:%M:%S", time.localtime()))
-                    simulate_bodies[key],simulate_data[key] = self.update_simulate_bodies(simulate_bodies[key],current_cond,control_vec,t,simulate_data[key])
-            #print("true bodies",t,time.strftime("%H:%M:%S", time.localtime()))
-            # True Case
-            self.bodies,true_data[true_key] = self.update_simulate_bodies(self.bodies,self.cond, control_vec, t,true_data[true_key])
+        for m in self.mass_list:
+            for f in self.force_list:
+                current_cond['mass'] = m
+                current_cond['lf'] = f
+                self.update_bodies(current_cond)
+                key = (tuple(m), tuple(np.array(f).flatten()))
+                simulate_data[key] = self.simulate_in_all(current_cond,control_vec)
+
         # Synchronize self.data to keep track of all steps from beginning to end
         self.update_data(true_data[true_key],control_vec)
         true_trace, states = generate_trajectory(true_data,True)
@@ -216,6 +238,7 @@ class physic_env():
         reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode)
         current_time = len(self.data['o1']['x']) - 1
         if(current_time >= self.cond['timeout']):
+            print(current_time)
             stop_flag = True
         else:
             stop_flag = False
