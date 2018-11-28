@@ -32,3 +32,8 @@ Similarly, if you want to train your q-agent with a target network to check if t
 ```bash
 $ python2 Qagent.py --mode [1 or 2 depends on your need]
 ```
+Additionally, we also provide a recurrent q-network (RQN) that predicts q-values based on the hidden states of the objects:
+```bash
+$ python2 RQN.py --mode [1 or 2 depends on your need]
+```
+You can modifiy the default time frame range per action and the total time frames per game in `simulator/config.py`.
