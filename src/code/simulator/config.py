@@ -14,7 +14,7 @@ BORDER = 0.20
 SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
 
 # hyper-parameter
-T = 30
+T = 40
 ig_mode = 1
 state_dim = T*8
 n_actions = 645
@@ -22,7 +22,7 @@ nn_h1 = 150
 nn_h2 = 250
 nn_h3 = 450
 epsilon = 0.5
-epsilon_decay = 0.99
+epsilon_decay = 0.95
 qlearning_gamma = 0.99 
 init_mouse = (0,0)
 #---For demonstration purposes, some random control---
@@ -75,7 +75,7 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
               [0, 0, 0, -3],
               [-3, 0, -3, 0]],
         'mass':[1,2,1,1],
-        'timeout': 240
+        'timeout': 480
     }
 # cond = {'sls':[{'x':1., 'y':1.1}, {'x':2.0, 'y':1.0}, {'x':1.0, 'y':3.0}, {'x':2.0, 'y':3.0}],
 #     'svs':[{'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}],
@@ -97,8 +97,9 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
 #     'timeout': 240
 # } 
 
-# reduce sample size to 2**7
-mass_list = [[1,1,1,1], [1,2,1,1]]
+# reduce sample size to 4*2**6
+mass_list = [[1,1,1,1], [1,2,1,1], [1,2,3,1], [3,1,1,2]]
+#mass_list = [[1,1,1,1], [1,2,1,1]]
 force_possible =[]
 for i in range(2**6):
     force_possible.append([0]*(6-len(generate_force(i,2)))+generate_force(i,2))

@@ -70,8 +70,9 @@ class q_agent:
 train_step = tf.train.AdamOptimizer(1e-4).minimize(q_agent.loss)
 
 def train_iteration(t_max, epsilon, train=False):
-    #print(time.strftime("%H:%M:%S", time.localtime()))
+    print(time.strftime("%H:%M:%S", time.localtime()))
     total_reward = 0
+    td_loss = 0
     s = new_env.reset()
 
     for t in range(t_max):
@@ -79,34 +80,60 @@ def train_iteration(t_max, epsilon, train=False):
         s_next, r, is_done = new_env.step(a)
 
         if train:
-            sess.run(train_step,{q_agent.s_ph: [s],q_agent.a_ph: [a], q_agent.r_ph: [r], q_agent.s_next_ph: [s_next], q_agent.is_done_ph: [is_done]})
+            _, loss_t = sess.run([train_step, q_agent.loss], {q_agent.s_ph: [s],q_agent.a_ph: [a], q_agent.r_ph: [r], q_agent.s_next_ph: [s_next], q_agent.is_done_ph: [is_done]})
 
         total_reward += r
+        td_loss += loss_t
         s = s_next
         if is_done:
             break
 
-    return total_reward
+    return [total_reward, td_loss]
 
 def train_loop(args):
     global epsilon
     rewards = []
-    for i in range(args.epochs):
-        epoch_rewards = [train_iteration(t_max=1000, epsilon=epsilon, train=True) for t in range(args.sessions)]
-        rewards += epoch_rewards
-        print("epoch {}\t mean reward = {:.3f}\t epsilon = {:.3f}".format(i, np.mean(epoch_rewards), epsilon))
-        epsilon *= epsilon_decay
+    loss = []
+    if args.mode == 1:
+        name = 'mass'
+    else:
+        name = 'force'
 
+    for i in range(args.epochs):
+        #print(time.strftime("%H:%M:%S", time.localtime()))
+        results = [train_iteration(t_max=1000, epsilon=epsilon, train=True) for t in range(args.sessions)]
+        epoch_rewards = [r[0] for r in results]
+        epoch_loss = [l[1] for l in results]
+        rewards += epoch_rewards
+        loss += epoch_loss
+
+        print("epoch {}\t mean reward = {:.4f}\t mean loss = {:.4f}\t epsilon = {:.4f}".format(i, np.mean(epoch_rewards), np.mean(epoch_loss), epsilon))
+        epsilon = max(epsilon * epsilon_decay, 0.01)
+
+        plt.figure(1)
         plt.plot(rewards)
         plt.ylabel("Reward")
         plt.xlabel("Number of iteration")
+        plt.title("MLP Q learning (" + name + ")")
         plt.pause(0.001)
+        fig = plt.gcf()
+        fig.savefig('Qlearning_{}_reward.png'.format(name))
+
+        plt.figure(2)
+        plt.plot(loss)
+        plt.ylabel("Loss")
+        plt.xlabel("Number of iteration")
+        plt.title("MLP Q learning (" + name + ")")
+        plt.pause(0.001)
+        fig = plt.gcf()
+        fig.savefig('Qlearning_{}_loss.png'.format(name))
+
     plt.show()
 
     return
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='training q-function approximator')
+    parser = argparse.ArgumentParser(description='training a q-function approximator')
     parser.add_argument('--epochs', type=int, action='store', help='number of epoches to train', default=1000)
     parser.add_argument('--mode', type=int, action='store', help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
     parser.add_argument('--sessions', type=int, action='store', help='number of sessions to train per epoch', default=10)

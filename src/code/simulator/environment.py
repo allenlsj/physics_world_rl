@@ -238,9 +238,8 @@ class physic_env():
         reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode)
         current_time = len(self.data['o1']['x']) - 1
         if(current_time >= self.cond['timeout']):
-            print(current_time)
+            #print(current_time)
             stop_flag = True
         else:
             stop_flag = False
         return states, reward, stop_flag
-

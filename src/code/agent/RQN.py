@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Qagent.py
+RQN.py
 """
 import sys
 sys.path.append('../simulator/')
@@ -18,22 +18,19 @@ import time
 tf.reset_default_graph()
 sess = tf.InteractiveSession()
 keras.backend.set_session(sess)
+num_feats = 8
 
 
 class q_agent:
-    def __init__(self, name, state_dim, n_actions, h1, h2, h3, epsilon=0):
+    def __init__(self, name, num_feats, n_actions, epsilon=0):
         with tf.variable_scope(name):
-            self.nn = keras.models.Sequential()
-            self.nn.add(L.InputLayer((state_dim,)))
-            self.nn.add(L.Dense(h1, activation='relu'))
-            #self.nn.add(L.Dropout(0.2))
-            self.nn.add(L.Dense(h2, activation='relu'))
-            #self.nn.add(L.Dropout(0.2))
-            self.nn.add(L.Dense(h3, activation='relu'))
-            self.nn.add(L.Dense(n_actions, activation='linear'))
+            inputs = L.Input(shape=(T, num_feats))
+            lstm, state_h, state_c = L.LSTM(num_feats, return_sequences=True, return_state=True)(inputs)
+            output = L.Dense(n_actions, activation='linear')(state_h)
+            self.nn = keras.models.Model(inputs=inputs, outputs=output)
 
             self.state_t = tf.placeholder(
-                'float32', [None, ] + list((state_dim,)))
+                'float32', [None, ] + list((T, num_feats,)))
             self.q_values_t = self.get_q_values_tensors(self.state_t)
 
         self.weights = tf.get_collection(
@@ -61,9 +58,9 @@ class q_agent:
 
 
 # initialize q agent and target network
-agent = q_agent("agent", state_dim, n_actions, nn_h1, nn_h2, nn_h3, epsilon)
-target_network = q_agent("target_network", state_dim,
-                         n_actions, nn_h1, nn_h2, nn_h3, epsilon)
+agent = q_agent("agent", num_feats, n_actions, epsilon)
+target_network = q_agent("target_network", num_feats,
+                         n_actions, epsilon)
 
 
 def load_weigths_into_target_network(agent, target_network):
@@ -76,11 +73,11 @@ def load_weigths_into_target_network(agent, target_network):
 class train_agent:
     # placeholders for <s, a, r, s'>
     s_ph = keras.backend.placeholder(
-        dtype='float32', shape=(None,) + (state_dim,))
+        dtype='float32', shape=(None,) + (T, num_feats,))
     a_ph = keras.backend.placeholder(dtype='int32', shape=[None])
     r_ph = keras.backend.placeholder(dtype='float32', shape=[None])
     s_next_ph = keras.backend.placeholder(
-        dtype='float32', shape=(None,) + (state_dim,))
+        dtype='float32', shape=(None,) + (T, num_feats,))
     is_done_ph = keras.backend.placeholder(dtype='bool', shape=[None])
 
     # predicted q-value
@@ -108,10 +105,12 @@ def train_iteration(t_max, train=False):
     total_reward = 0
     td_loss = 0
     s = new_env.reset()
+    s = np.transpose(np.array(s).reshape(num_feats/2,T,2),[0,2,1]).flatten().reshape(num_feats, T).T
 
     for t in range(t_max):
         a = agent.get_action(s)
         s_next, r, is_done = new_env.step(a)
+        s_next = np.transpose(np.array(s_next).reshape(num_feats/2,T,2),[0,2,1]).flatten().reshape(num_feats, T).T
 
         if train:
             _, loss_t = sess.run([train_step, train_agent.loss], {train_agent.s_ph: [s], train_agent.a_ph: [a], train_agent.r_ph: [
@@ -142,7 +141,7 @@ def train_loop(args):
         epoch_loss = [l[1] for l in results]
         rewards += epoch_rewards
         loss += epoch_loss
-        print("epoch {}\t mean reward = {:.4f}\t mean loss = {:.4f}\t epsilon = {:.3f}".format(
+        print("epoch {}\t mean reward = {:.4f}\t mean loss = {:.4f}\t epsilon = {:.4f}".format(
             i, np.mean(epoch_rewards), np.mean(epoch_loss), agent.epsilon))
         # adjust agent parameters
         if i % 2 == 0:
@@ -153,28 +152,27 @@ def train_loop(args):
         plt.plot(rewards)
         plt.ylabel("Reward")
         plt.xlabel("Number of iteration")
-        plt.title("MLP Q learning with target network (" + name + ")")
+        plt.title("Recurrent Q learning with target network (" + name + ")")
         plt.pause(0.001)
         fig = plt.gcf()
-        fig.savefig('Qagent_{}_reward.png'.format(name))
+        fig.savefig('RQN_{}_reward.png'.format(name))
 
         plt.figure(2)
         plt.plot(loss)
         plt.ylabel("Loss")
         plt.xlabel("Number of iteration")
-        plt.title("MLP Q learning with target network (" + name + ")")
+        plt.title("Recurrent Q learning with target network (" + name + ")")
         plt.pause(0.001)
         fig = plt.gcf()
-        fig.savefig('Qagent_{}_loss.png'.format(name))
+        fig.savefig('RQN_{}_loss.png'.format(name))
 
     plt.show()
 
     return
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='training a q-function approximator with target netowrk')
+        description='training a recurrent q-network')
     parser.add_argument('--epochs', type=int, action='store',
                         help='number of epoches to train', default=1000)
     parser.add_argument('--mode', type=int, action='store',
