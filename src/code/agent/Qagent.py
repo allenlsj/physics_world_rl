@@ -142,8 +142,8 @@ def train_loop(args):
         epoch_loss = [l[1] for l in results]
         rewards += epoch_rewards
         loss += epoch_loss
-        print("epoch {}\t mean reward = {:.4f}\t mean loss = {:.4f}\t epsilon = {:.3f}".format(
-            i, np.mean(epoch_rewards), np.mean(epoch_loss), agent.epsilon))
+        print("epoch {}\t mean reward = {:.4f}\t mean loss = {:.4f}\t total reward = {:.4f}\t epsilon = {:.3f}".format(
+            i, np.mean(epoch_rewards), np.mean(epoch_loss), np.sum(rewards),agent.epsilon))
         # adjust agent parameters
         if i % 2 == 0:
             load_weigths_into_target_network(agent, target_network)
@@ -167,6 +167,15 @@ def train_loop(args):
         fig = plt.gcf()
         fig.savefig('Qagent_{}_loss.png'.format(name))
 
+        plt.figure(3)
+        plt.plot(np.cumsum(rewards))
+        plt.ylabel("Cumulative Reward")
+        plt.xlabel("Number of iteration")
+        plt.title("MLP Q learning with target network (" + name + ")")
+        plt.pause(0.001)
+        fig = plt.gcf()
+        fig.savefig('Qagent_{}_cum_reward.png'.format(name))
+
     plt.show()
 
     return
@@ -176,7 +185,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='training a q-function approximator with target netowrk')
     parser.add_argument('--epochs', type=int, action='store',
-                        help='number of epoches to train', default=1000)
+                        help='number of epoches to train', default=10)
     parser.add_argument('--mode', type=int, action='store',
                         help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
     parser.add_argument('--sessions', type=int, action='store',

@@ -42,28 +42,28 @@ def generate_force(n,x):
     b.reverse()
     return b
 
-mass_list = [[1,1,1,1], [1,2,1,1], [2,1,1,1]]
+# mass_list = [[1,1,1,1], [1,2,1,1], [2,1,1,1]]
 
-force_possible =[]
-for i in range(3**6):
-    force_possible.append([0]*(6-len(generate_force(i,3)))+generate_force(i,3))
-force_list = []
-for num in force_possible:
-    num = np.array(num)
-    force = np.zeros([4,4])
-    force[1,0] = (num[0]-1)*3
-    force[2,:2] = (num[1:3]-1)*3
-    force[3,:3] = (num[3:]-1)*3
-    force = force+force.T
-    force_list.append(force)
+# force_possible =[]
+# for i in range(3**6):
+#     force_possible.append([0]*(6-len(generate_force(i,3)))+generate_force(i,3))
+# force_list = []
+# for num in force_possible:
+#     num = np.array(num)
+#     force = np.zeros([4,4])
+#     force[1,0] = (num[0]-1)*3
+#     force[2,:2] = (num[1:3]-1)*3
+#     force[3,:3] = (num[3:]-1)*3
+#     force = force+force.T
+#     force_list.append(force)
 
 simulate_state_dic_list = None
 true_state_dic_list = None
 
-prior = dict()
-for m in mass_list:
-    for f in force_list:
-        prior[(tuple(m),tuple(np.array(f).flatten()))] = 1.0/(len(mass_list)*len(force_list))
+# prior = dict()
+# for m in mass_list:
+#     for f in force_list:
+#         prior[(tuple(m),tuple(np.array(f).flatten()))] = 1.0/(len(mass_list)*len(force_list))
 
 
 # --- SET STARTING CONDITIONS --- 
@@ -112,3 +112,8 @@ for num in force_possible:
     force[3,:3] = (num[3:]-1)*3
     force = force+force.T
     force_list.append(force)
+
+prior = dict()
+for m in mass_list:
+    for f in force_list:
+        prior[(tuple(m),tuple(np.array(f).flatten()))] = 1.0/(len(mass_list)*len(force_list))
