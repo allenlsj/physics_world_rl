@@ -243,3 +243,5 @@ class physic_env():
         else:
             stop_flag = False
         return states, reward, stop_flag
+    def step_data(self):
+        return self.data
