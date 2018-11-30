@@ -220,6 +220,7 @@ class physic_env():
         current_cond = self.update_condition(self.cond['mass'],self.cond['lf'])
         # true case
         true_key = (tuple(self.cond['mass']), tuple(np.array(self.cond['lf']).flatten()))
+        self.update_bodies(current_cond)
         true_data = {true_key: self.simulate_in_all(current_cond, control_vec)}
         # simulate case
         simulate_data = {}
@@ -232,7 +233,11 @@ class physic_env():
                 simulate_data[key] = self.simulate_in_all(current_cond,control_vec)
 
         # Synchronize self.data to keep track of all steps from beginning to end
+        #print("before update",self.data['o1']['x'])
+        #print("update",true_data[true_key]['o1']['x'])
         self.update_data(true_data[true_key],control_vec)
+        #print("after update",self.data['o1']['x'])
+        #print("******************")
         true_trace, states = generate_trajectory(true_data,True)
         simulate_trace, _ = generate_trajectory(simulate_data,False)
         reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode)
