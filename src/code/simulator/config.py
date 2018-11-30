@@ -28,9 +28,7 @@ init_mouse = (0,0)
 #---For demonstration purposes, some random control---
 control_vec = {'obj': np.append(np.repeat(0, 60), np.repeat(1, 180)), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
 # control_vec = {'obj': np.repeat(0, 240), 'x':np.repeat(3, 240), 'y':np.repeat(3, 240)}
-
-def generate_force(n,x):
-    a=[0,1,2,3,4,5,6,7,8,9,'A','b','C','D','E','F']
+def transfer(n,x):
     b=[]
     while True:
         s=n//x
@@ -41,21 +39,18 @@ def generate_force(n,x):
         n=s
     b.reverse()
     return b
+def generate_force(force_possible):
+    force_list = []
+    for num in force_possible:
+        num = np.array(num)
+        force = np.zeros([4,4])
+        force[1,0] = (num[0]-1)*3
+        force[2,:2] = (num[1:3]-1)*3
+        force[3,:3] = (num[3:]-1)*3
+        force = force+force.T
+        force_list.append(force)
+    return force_list
 
-# mass_list = [[1,1,1,1], [1,2,1,1], [2,1,1,1]]
-
-# force_possible =[]
-# for i in range(3**6):
-#     force_possible.append([0]*(6-len(generate_force(i,3)))+generate_force(i,3))
-# force_list = []
-# for num in force_possible:
-#     num = np.array(num)
-#     force = np.zeros([4,4])
-#     force[1,0] = (num[0]-1)*3
-#     force[2,:2] = (num[1:3]-1)*3
-#     force[3,:3] = (num[3:]-1)*3
-#     force = force+force.T
-#     force_list.append(force)
 
 simulate_state_dic_list = None
 true_state_dic_list = None
@@ -77,42 +72,38 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
         'mass':[1,2,1,1],
         'timeout': 480
     }
-# cond = {'sls':[{'x':1., 'y':1.1}, {'x':2.0, 'y':1.0}, {'x':1.0, 'y':3.0}, {'x':2.0, 'y':3.0}],
-#     'svs':[{'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}, {'x':0.0, 'y':0.0}],
-#     'lf':[[0, 10, 0, 0],
-#           [10, 0, 0, 0],
-#           [0, 0, 0, 0],
-#           [0, 0, 0, 0]],
-#     'mass':[1,1,1,1],
-#     'timeout': 240}
-    
-# Collisions but no forces
-# cond = {'sls':[{'x':1.0, 'y':1.0}, {'x':2.0, 'y':1.0}, {'x':1.0, 'y':3.0}, {'x':2.0, 'y':3.0}],
-#     'svs':[{'x':2.0, 'y':0.0}, {'x':-3.0, 'y':0.0}, {'x':2.0, 'y':0.1}, {'x':0.0, 'y':0.0}],
-#     'lf':[[0.0, 0.0, 0.0, 0.0],
-#           [0.0, 0.0, 0.0, 0.0],
-#           [0.0, 0.0, 0.0, 0.0],
-#           [0.0, 0.0, 0.0, 0.0]],
-#     'mass':[1.0,1.0,1.0,1.0],
-#     'timeout': 240
-# } 
 
-# reduce sample size to 4*2**6
-mass_list = [[1,1,1,1], [1,2,1,1], [1,2,3,1], [3,1,1,2]]
-#mass_list = [[1,1,1,1], [1,2,1,1]]
+# 3**7
+# mass_list = [[1,1,1,1], [1,2,1,1], [2,1,1,1]]
+
+# force_possible =[]
+# for i in range(3**6):
+#     force_possible.append([0]*(6-len(transfer(i,3)))+transfer(i,3))
+# force_list = generate_force(force_possible)
+
+
+# 2**2*2**6 = 2**8
+# mass_list = [[1,1,1,1], [1,2,1,1], [1,2,3,1], [3,1,1,2]]
+# #mass_list = [[1,1,1,1], [1,2,1,1]]
+# force_possible =[]
+# for i in range(2**6):
+#     force_possible.append([0]*(6-len(transfer(i,2)))+transfer(i,2))
+# force_list = generate_force(force_possible)
+
+
+
+# 2**5*2**5 = 2**10
+mass_possible =[]
+for i in range(2**4):
+    mass_possible.append([0]*(4-len(transfer(i,2)))+transfer(i,2))
+mass_list = [np.array(mass)+1 for mass in mass_possible] + [np.array(mass)*2+1 for mass in mass_possible]
 force_possible =[]
 for i in range(2**6):
-    force_possible.append([0]*(6-len(generate_force(i,2)))+generate_force(i,2))
-force_list = []
-for num in force_possible:
-    num = np.array(num)
-    force = np.zeros([4,4])
-    force[1,0] = (num[0]-1)*3
-    force[2,:2] = (num[1:3]-1)*3
-    force[3,:3] = (num[3:]-1)*3
-    force = force+force.T
-    force_list.append(force)
+    force_possible.append([0]*(6-len(transfer(i,2)))+transfer(i,2))
+force_list = generate_force(force_possible[:32])
 
+
+# initial prior
 prior = dict()
 for m in mass_list:
     for f in force_list:
