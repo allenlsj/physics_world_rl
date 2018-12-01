@@ -152,7 +152,7 @@ def train_loop(args):
         plt.plot(rewards)
         plt.ylabel("Reward")
         plt.xlabel("Number of iteration")
-        plt.title("Recurrent Q learning with target network (" + name + ")")
+        plt.title("Recurrent Q Network with target network (" + name + ")")
         plt.pause(0.001)
         fig = plt.gcf()
         fig.savefig('RQN_{}_reward.png'.format(name))
@@ -161,7 +161,7 @@ def train_loop(args):
         plt.plot(loss)
         plt.ylabel("Loss")
         plt.xlabel("Number of iteration")
-        plt.title("Recurrent Q learning with target network (" + name + ")")
+        plt.title("Recurrent Q Network with target network (" + name + ")")
         plt.pause(0.001)
         fig = plt.gcf()
         fig.savefig('RQN_{}_loss.png'.format(name))
@@ -170,10 +170,19 @@ def train_loop(args):
         plt.plot(np.cumsum(rewards))
         plt.ylabel("Cumulative Reward")
         plt.xlabel("Number of iteration")
-        plt.title("MLP Q learning with target network (" + name + ")")
+        plt.title("Recurrent Q Network with target network (" + name + ")")
         plt.pause(0.001)
         fig = plt.gcf()
         fig.savefig('RQN_{}_cum_reward.png'.format(name))
+
+    if args.save_model:
+        model_json = agent.nn.to_json()
+        with open('RQN_{}.json'.format(name), 'w') as json_file:
+            json_file.write(model_json)
+        agent.nn.save_weights('RQN_{}.h5'.format(name))
+        print("Model saved!")
+        np.savetxt('RQN_{}.txt'.format(name), (rewards, loss, np.cumsum(rewards).tolist()))
+        print("Training details saved!")
 
     plt.show()
 
@@ -186,6 +195,7 @@ if __name__ == "__main__":
                         help='number of epoches to train', default=10)
     parser.add_argument('--mode', type=int, action='store',
                         help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
+    parser.add_argument('--save_model', type=bool, action='store', help='save trained model or not', default=True)
     parser.add_argument('--sessions', type=int, action='store',
                         help='number of sessions to train per epoch', default=10)
 

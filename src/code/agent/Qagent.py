@@ -24,8 +24,7 @@ class q_agent:
     def __init__(self, name, state_dim, n_actions, h1, h2, h3, epsilon=0):
         with tf.variable_scope(name):
             self.nn = keras.models.Sequential()
-            self.nn.add(L.InputLayer((state_dim,)))
-            self.nn.add(L.Dense(h1, activation='relu'))
+            self.nn.add(L.Dense(h1, activation='relu', input_shape=(state_dim,)))
             #self.nn.add(L.Dropout(0.2))
             self.nn.add(L.Dense(h2, activation='relu'))
             #self.nn.add(L.Dropout(0.2))
@@ -176,6 +175,15 @@ def train_loop(args):
         fig = plt.gcf()
         fig.savefig('Qagent_{}_cum_reward.png'.format(name))
 
+    if args.save_model:
+        model_json = agent.nn.to_json()
+        with open('Qagent_{}.json'.format(name), 'w') as json_file:
+            json_file.write(model_json)
+        agent.nn.save_weights('Qagent_{}.h5'.format(name))
+        print("Model saved!")
+        np.savetxt('Qagent_{}.txt'.format(name), (rewards, loss, np.cumsum(rewards).tolist()))
+        print("Training details saved!")
+
     plt.show()
 
     return
@@ -188,6 +196,7 @@ if __name__ == "__main__":
                         help='number of epoches to train', default=10)
     parser.add_argument('--mode', type=int, action='store',
                         help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
+    parser.add_argument('--save_model', type=bool, action='store', help='save trained model or not', default=True)
     parser.add_argument('--sessions', type=int, action='store',
                         help='number of sessions to train per epoch', default=10)
 

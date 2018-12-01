@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import keras
 import keras.layers as L
+from keras.models import model_from_json, load_model
 import time
 
 tf.reset_default_graph()
@@ -21,9 +22,8 @@ keras.backend.set_session(sess)
 
 def Network(state_dim, n_actions, h1, h2, h3):
     nn = keras.models.Sequential()
-    nn.add(L.InputLayer((state_dim,)))
 
-    nn.add(L.Dense(h1, activation='relu'))
+    nn.add(L.Dense(h1, activation='relu', input_shape=(state_dim,)))
     nn.add(L.Dense(h2, activation='relu'))
     nn.add(L.Dense(h3, activation='relu'))
     nn.add(L.Dense(n_actions, activation='linear'))
@@ -78,6 +78,7 @@ def train_iteration(t_max, epsilon, train=False):
     for t in range(t_max):
         a = get_action(s, epsilon)
         s_next, r, is_done = new_env.step(a)
+        #print(r)
 
         if train:
             _, loss_t = sess.run([train_step, q_agent.loss], {q_agent.s_ph: [s],q_agent.a_ph: [a], q_agent.r_ph: [r], q_agent.s_next_ph: [s_next], q_agent.is_done_ph: [is_done]})
@@ -132,10 +133,19 @@ def train_loop(args):
         plt.plot(np.cumsum(rewards))
         plt.ylabel("Cumulative Reward")
         plt.xlabel("Number of iteration")
-        plt.title("MLP Q learning with target network (" + name + ")")
+        plt.title("MLP Q learning (" + name + ")")
         plt.pause(0.001)
         fig = plt.gcf()
         fig.savefig('Qlearning_{}_cum_reward.png'.format(name))
+
+    if args.save_model:
+        model_json = nn.to_json()
+        with open('Qlearning_{}.json'.format(name), 'w') as json_file:
+            json_file.write(model_json)
+        nn.save_weights('Qlearning_{}.h5'.format(name))
+        print("Model saved!")
+        np.savetxt('Qlearning_{}.txt'.format(name), (rewards, loss, np.cumsum(rewards).tolist()))
+        print("Training details saved!")
 
     plt.show()
 
@@ -145,6 +155,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='training a q-function approximator')
     parser.add_argument('--epochs', type=int, action='store', help='number of epoches to train', default=10)
     parser.add_argument('--mode', type=int, action='store', help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
+    parser.add_argument('--save_model', type=bool, action='store', help='save trained model or not', default=True)
     parser.add_argument('--sessions', type=int, action='store', help='number of sessions to train per epoch', default=10)
 
     args = parser.parse_args()

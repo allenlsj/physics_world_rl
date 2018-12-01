@@ -50,7 +50,11 @@ def generate_force(force_possible):
         force = force+force.T
         force_list.append(force)
     return force_list
-
+def generate_possible(level,length):
+    possible = []
+    for i in range(level**length):
+        possible.append([0]*(length-len(transfer(i,level)))+transfer(i,level))
+    return possible
 
 simulate_state_dic_list = None
 true_state_dic_list = None
@@ -75,31 +79,24 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
 
 # 3**7
 # mass_list = [[1,1,1,1], [1,2,1,1], [2,1,1,1]]
-
-# force_possible =[]
-# for i in range(3**6):
-#     force_possible.append([0]*(6-len(transfer(i,3)))+transfer(i,3))
+# force_possible = generate_possible(3,6)
 # force_list = generate_force(force_possible)
 
 
 # 2**2*2**6 = 2**8
 # mass_list = [[1,1,1,1], [1,2,1,1], [1,2,3,1], [3,1,1,2]]
 # #mass_list = [[1,1,1,1], [1,2,1,1]]
-# force_possible =[]
-# for i in range(2**6):
-#     force_possible.append([0]*(6-len(transfer(i,2)))+transfer(i,2))
+# force_possible =generate_possible(2,6)
 # force_list = generate_force(force_possible)
 
 
 
+
 # 2**5*2**5 = 2**10
-mass_possible =[]
-for i in range(2**4):
-    mass_possible.append([0]*(4-len(transfer(i,2)))+transfer(i,2))
-mass_list = [np.array(mass)+1 for mass in mass_possible] + [np.array(mass)*2+1 for mass in mass_possible]
-force_possible =[]
-for i in range(2**6):
-    force_possible.append([0]*(6-len(transfer(i,2)))+transfer(i,2))
+mass_possible = generate_possible(3,4)
+mass_list = [np.array(mass)+1 for mass in mass_possible][:32]
+
+force_possible =generate_possible(2,6)
 force_list = generate_force(force_possible[:32])
 
 
