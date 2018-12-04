@@ -17,16 +17,19 @@ def plot(args):
     qlearning_reward = qlearning[0]
     qlearning_loss = qlearning[1]
     qlearning_cum_reward = qlearning[2]
+    print('Final loss of qlearning:{}'.format(qlearning_loss[-1]))
 
     qagent = np.loadtxt(args.Qagent)
     qagent_reward = qagent[0]
     qagent_loss = qagent[1]
     qagent_cum_reward = qagent[2]
+    print('Final loss of qagent:{}'.format(qagent_loss[-1]))
 
     RQN = np.loadtxt(args.RQN)
     RQN_reward = RQN[0]
     RQN_loss = RQN[1]
     RQN_cum_reward = RQN[2]
+    print('Final loss of RQN:{}'.format(RQN_loss[-1]))
 
     plt.figure(1)
     plt.plot(qlearning_reward)
@@ -36,6 +39,8 @@ def plot(args):
     plt.ylabel("Rewards")
     plt.xlabel("Number of iterations")
     plt.title(name)
+    fig = plt.gcf()
+    fig.savefig('Final_reward_{}.png'.format(name))
 
     plt.figure(2)
     plt.plot(qlearning_loss)
@@ -45,6 +50,8 @@ def plot(args):
     plt.ylabel("Loss")
     plt.xlabel("Number of iterations")
     plt.title(name)
+    fig = plt.gcf()
+    fig.savefig('Final_loss_{}.png'.format(name))
 
     plt.figure(3)
     plt.plot(qlearning_cum_reward)
@@ -54,6 +61,8 @@ def plot(args):
     plt.ylabel("Cumulative Rewards")
     plt.xlabel("Number of iterations")
     plt.title(name)
+    fig = plt.gcf()
+    fig.savefig('Final_cum_reward_{}.png'.format(name))
 
     plt.show()
 
