@@ -93,12 +93,14 @@ cond = {'sls':[{'x':1, 'y':1}, {'x':2, 'y':1}, {'x':1, 'y':2}, {'x':2, 'y':2}],
 
 
 # 2**5*2**5 = 2**10
+np.random.seed(0)
 mass_possible = generate_possible(3,4)
-mass_list = [np.array(mass)+1 for mass in mass_possible][:32]
+mass_possible = [mass_possible[i] for i in np.random.choice(81,32,replace= False)]
+mass_list = [np.array(mass)+1 for mass in mass_possible]
 
-force_possible =generate_possible(2,6)
-force_list = generate_force(force_possible[:32])
-
+force_possible =generate_possible(3,6)
+force_possible = [force_possible[i] for i in np.random.choice(729,32,replace= False)]
+force_list = generate_force(force_possible)
 
 # initial prior
 prior = dict()
