@@ -37,3 +37,9 @@ Additionally, we also provide a recurrent q-network (RQN) that predicts q-values
 $ python2 RQN.py --mode [1 or 2 depends on your need]
 ```
 You can modifiy the default time frame range per action and the total time frames per game in `simulator/config.py`.
+
+### Prediction
+A sample code illustrating how to apply the trained model to explore the environment and how to generate the video regarding the exploration has been provided under the `agent/` folder. Simply execute the following command:
+```bash
+$ python2 record_video.py --mode [1 or 2 depends on your need]
+```
