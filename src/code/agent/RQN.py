@@ -46,7 +46,8 @@ class q_agent:
 
     def get_action(self, s):
         epsilon = self.epsilon
-        q_values = self.nn.predict(np.array(s)[None])[0]
+        #q_values = self.nn.predict(np.array(s)[None])[0]
+        q_values = self.get_q_values([s])
 
         thre = np.random.rand()
         if thre < epsilon:
