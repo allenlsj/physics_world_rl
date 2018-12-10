@@ -33,8 +33,8 @@ class physic_env():
         self.force_list = force_list
         self.T = time_stamp
         self.ig_mode = ig_mode
-        self.prior = prior
-        self.PRIOR = prior
+        self.prior = copy.deepcopy(prior)
+        self.PRIOR = copy.deepcopy(prior)
         #self.simulate_state_dic = {}
         #self.true_state_dic = {}
 
@@ -108,7 +108,7 @@ class physic_env():
         true_data = {true_key: self.simulate_in_all(self.cond, control_vec)}
         self.data = self.initial_data(self.bodies)
         _, states = generate_trajectory(true_data,True)
-        self.prior = self.PRIOR
+        self.prior = copy.deepcopy(self.PRIOR)
         return states
 
     def initial_data(self,bodies = None,init_mouse = None):
