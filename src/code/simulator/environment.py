@@ -17,7 +17,7 @@ from information_gain import *
 import time
 
 class physic_env():
-    def __init__(self, cond, mass_list, force_list, init_mouse, time_stamp, ig_mode, prior):
+    def __init__(self, cond, mass_list, force_list, init_mouse, time_stamp, ig_mode, prior,reward_stop):
         # --- pybox2d world setup ---
 
         # Create the world
@@ -35,6 +35,12 @@ class physic_env():
         self.ig_mode = ig_mode
         self.prior = copy.deepcopy(prior)
         self.PRIOR = copy.deepcopy(prior)
+        self.reward_stop = reward_stop
+        if ig_mode == 1:
+            self.total_reward = entropy(marginalize_prior(prior, 0))
+        elif ig_mode == 2:
+            self.total_reward = entropy(marginalize_prior(prior, 1))
+        self.step_reward = []
         #self.simulate_state_dic = {}
         #self.true_state_dic = {}
 
@@ -62,22 +68,22 @@ class physic_env():
 
     # --- add static walls ---
     def add_static_walls(self):
-        w = self.world.CreateStaticBody(position=(WIDTH / 2, 0), shapes=polygonShape(box=(WIDTH / 2, BORDER)),
+        w = self.world.CreateStaticBody(position=(WIDTH / 2, 0), #shapes=polygonShape(box=(WIDTH / 2, BORDER)),
                                         userData={'name': 'top_wall', 'bodyType': 'static'})
         w.CreateFixture(shape=polygonShape(
             box=(WIDTH / 2, BORDER)), friction=0.05, restitution=0.98)
         self.walls.append(w)
-        w = self.world.CreateStaticBody(position=(WIDTH / 2, HEIGHT),  # shapes=polygonShape(box=(WIDTH/2, BORDER)),
+        w = self.world.CreateStaticBody(position=(WIDTH / 2, HEIGHT), #shapes=polygonShape(box=(WIDTH/2, BORDER)),
                                         userData={'name': 'bottom_wall', 'bodyType': 'static'})
         w.CreateFixture(shape=polygonShape(
             box=(WIDTH / 2, BORDER)), friction=0.05, restitution=0.98)
         self.walls.append(w)
-        w = self.world.CreateStaticBody(position=(0, HEIGHT / 2),  # shapes=polygonShape(box=(BORDER, HEIGHT/2)),
+        w = self.world.CreateStaticBody(position=(0, HEIGHT / 2), #shapes=polygonShape(box=(BORDER, HEIGHT/2)),
                                         userData={'name': 'left_wall', 'bodyType': 'static'})
         w.CreateFixture(shape=polygonShape(
             box=(BORDER, HEIGHT / 2)), friction=0.05, restitution=0.98)
         self.walls.append(w)
-        w = self.world.CreateStaticBody(position=(WIDTH, HEIGHT / 2),  # shapes=polygonShape(box=(BORDER, HEIGHT/2)),
+        w = self.world.CreateStaticBody(position=(WIDTH, HEIGHT / 2), #shapes=polygonShape(box=(BORDER, HEIGHT/2)),
                                         userData={'name': 'right_wall', 'bodyType': 'static'})
         w.CreateFixture(shape=polygonShape(
             box=(BORDER, HEIGHT / 2)), friction=0.05, restitution=0.98)
@@ -109,6 +115,7 @@ class physic_env():
         self.data = self.initial_data(self.bodies)
         _, states = generate_trajectory(true_data,True)
         self.prior = copy.deepcopy(self.PRIOR)
+        self.step_reward = []
         return states
 
     def initial_data(self,bodies = None,init_mouse = None):
@@ -240,13 +247,18 @@ class physic_env():
         #print("******************")
         true_trace, states = generate_trajectory(true_data,True)
         simulate_trace, _ = generate_trajectory(simulate_data,False)
+        
+        other_mode = 3 - self.ig_mode
+        reward_others, _ = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, other_mode)
         reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode)
+        self.step_reward.append(reward)
+        print("step reward: ", len(self.step_reward), np.sum(self.step_reward))
         current_time = len(self.data['o1']['x']) - 1
-        if(current_time >= self.cond['timeout']):
+        if(current_time >= self.cond['timeout'] or np.sum(self.step_reward)>self.total_reward * self.reward_stop):
             #print(current_time)
             stop_flag = True
         else:
             stop_flag = False
-        return states, reward, stop_flag
+        return states, reward, stop_flag, reward_others
     def step_data(self):
         return self.data

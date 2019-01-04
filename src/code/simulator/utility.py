@@ -163,11 +163,13 @@ def generate_trajectory(data,flag):
         for obj in ['o1', 'o2', 'o3', 'o4']:
             vx = np.array(data[key][obj]['vx'])
             vy = np.array(data[key][obj]['vy'])
+            x = np.array(data[key][obj]['x'])
+            y = np.array(data[key][obj]['y'])
             r = np.sqrt(vx**2+vy**2)
             theta = np.arctan2(vy,vx)
             theta[theta<0] += 2 * np.pi
             if(flag):
-                states += list(np.vstack([r,theta]).transpose().flatten())
+                states += list(np.vstack([r,theta,x,y]).transpose().flatten())
             dict_r_theta[obj] = {'r':list(r),'rotation':list(theta)}
         trajectory[key] = dict_r_theta
     return trajectory,list(states)
