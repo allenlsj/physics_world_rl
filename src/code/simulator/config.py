@@ -16,7 +16,7 @@ SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
 
 # hyper-parameter
 T = 40
-TIMEOUT = 1200
+TIMEOUT = 80
 ig_mode = 1
 state_dim = T*8
 n_actions = 645
@@ -113,12 +113,12 @@ def generate_cond(size,timeout = TIMEOUT):
         Y = 3.1*np.random.rand(4) + BALL_RADIUS + BORDER
         VX = np.random.uniform(-2,2,4)
         VY = np.random.uniform(-2,2,4)
-        lf_idx = np.random.randint(729)
-        mass_idx = np.random.randint(81)
+        lf_idx = np.random.randint(32)
+        mass_idx = np.random.randint(32)
         cond_list.append({'sls':[{'x':X[0], 'y':Y[0]}, {'x':X[1], 'y':Y[1]}, {'x':X[2], 'y':Y[2]}, {'x':X[3], 'y':Y[3]}],
         'svs':[{'x':VX[0], 'y':VY[0]}, {'x':VX[1], 'y':VY[1]}, {'x':VX[2], 'y':VY[2]}, {'x':VX[3], 'y':VY[3]}],
-        'lf':generate_force([force_all_possible[lf_idx]])[0].tolist(),
-        'mass':(np.array(mass_all_possible[mass_idx])+1).tolist(),
+        'lf':generate_force([force_possible[lf_idx]])[0].tolist(),
+        'mass':(np.array(mass_possible[mass_idx])+1).tolist(),
         'timeout': timeout
         })
     return cond_list
