@@ -18,7 +18,7 @@ import time
 tf.reset_default_graph()
 sess = tf.InteractiveSession()
 keras.backend.set_session(sess)
-num_feats = 8
+num_feats = 16
 
 
 class q_agent:
@@ -104,13 +104,14 @@ sess.run(tf.global_variables_initializer())
 def train_iteration(t_max, train=False):
     #print(time.strftime("%H:%M:%S", time.localtime()))
     total_reward = 0
+    total_reward_others = 0
     td_loss = 0
     s = new_env.reset()
     s = np.transpose(np.array(s).reshape(num_feats/2,T,2),[0,2,1]).flatten().reshape(num_feats, T).T
 
     for t in range(t_max):
         a = agent.get_action(s)
-        s_next, r, is_done = new_env.step(a)
+        s_next, r, is_done, r_others = new_env.step(a)
         s_next = np.transpose(np.array(s_next).reshape(num_feats/2,T,2),[0,2,1]).flatten().reshape(num_feats, T).T
 
         if train:
@@ -118,16 +119,18 @@ def train_iteration(t_max, train=False):
                      r], train_agent.s_next_ph: [s_next], train_agent.is_done_ph: [is_done]})
 
         total_reward += r
+        total_reward_others += r_others
         td_loss += loss_t
         s = s_next
         if is_done:
             break
 
-    return [total_reward, td_loss]
+    return [total_reward, total_reward_others, td_loss]
 
 
 def train_loop(args):
     rewards = []
+    rewards_others = []
     loss = []
     if args.mode == 1:
         name = 'mass'
@@ -139,42 +142,44 @@ def train_loop(args):
         results = [train_iteration(
             t_max=1000, train=True) for t in range(args.sessions)]
         epoch_rewards = [r[0] for r in results]
-        epoch_loss = [l[1] for l in results]
+        epoch_rewards_others = [r[1] for r in results]
+        epoch_loss = [l[2] for l in results]
         rewards += epoch_rewards
+        rewards_others += epoch_rewards_others
         loss += epoch_loss
-        print("epoch {}\t mean reward = {:.4f}\t mean loss = {:.4f}\t total reward = {:.4f}\t epsilon = {:.4f}".format(
-            i, np.mean(epoch_rewards), np.mean(epoch_loss), np.sum(rewards),agent.epsilon))
+        print("epoch {}\t mean reward = {:.4f}\t mean reward (others) = {:.4f}\t mean loss = {:.4f}\t total reward = {:.4f}\t epsilon = {:.4f}".format(
+            i, np.mean(epoch_rewards), np.mean(epoch_rewards_others), np.mean(epoch_loss), np.sum(rewards),agent.epsilon))
         # adjust agent parameters
-        if i % 2 == 0:
+        if i % 1 == 0:
             load_weigths_into_target_network(agent, target_network)
             agent.epsilon = max(agent.epsilon * epsilon_decay, 0.01)
 
-        plt.figure(1)
-        plt.plot(rewards)
-        plt.ylabel("Reward")
-        plt.xlabel("Number of iteration")
-        plt.title("Recurrent Q Network with target network (" + name + ")")
-        plt.pause(0.001)
-        fig = plt.gcf()
-        fig.savefig('RQN_{}_reward.png'.format(name))
+        # plt.figure(1)
+        # plt.plot(rewards)
+        # plt.ylabel("Reward")
+        # plt.xlabel("Number of iteration")
+        # plt.title("Recurrent Q Network with target network (" + name + ")")
+        # plt.pause(0.001)
+        # fig = plt.gcf()
+        # fig.savefig('RQN_{}_reward.png'.format(name))
 
-        plt.figure(2)
-        plt.plot(loss)
-        plt.ylabel("Loss")
-        plt.xlabel("Number of iteration")
-        plt.title("Recurrent Q Network with target network (" + name + ")")
-        plt.pause(0.001)
-        fig = plt.gcf()
-        fig.savefig('RQN_{}_loss.png'.format(name))
+        # plt.figure(2)
+        # plt.plot(loss)
+        # plt.ylabel("Loss")
+        # plt.xlabel("Number of iteration")
+        # plt.title("Recurrent Q Network with target network (" + name + ")")
+        # plt.pause(0.001)
+        # fig = plt.gcf()
+        # fig.savefig('RQN_{}_loss.png'.format(name))
 
-        plt.figure(3)
-        plt.plot(np.cumsum(rewards))
-        plt.ylabel("Cumulative Reward")
-        plt.xlabel("Number of iteration")
-        plt.title("Recurrent Q Network with target network (" + name + ")")
-        plt.pause(0.001)
-        fig = plt.gcf()
-        fig.savefig('RQN_{}_cum_reward.png'.format(name))
+        # plt.figure(3)
+        # plt.plot(np.cumsum(rewards))
+        # plt.ylabel("Cumulative Reward")
+        # plt.xlabel("Number of iteration")
+        # plt.title("Recurrent Q Network with target network (" + name + ")")
+        # plt.pause(0.001)
+        # fig = plt.gcf()
+        # fig.savefig('RQN_{}_cum_reward.png'.format(name))
 
     if args.save_model:
         model_json = agent.nn.to_json()
@@ -182,7 +187,7 @@ def train_loop(args):
             json_file.write(model_json)
         agent.nn.save_weights('RQN_{}.h5'.format(name))
         print("Model saved!")
-        np.savetxt('RQN_{}.txt'.format(name), (rewards, loss, np.cumsum(rewards).tolist()))
+        np.savetxt('RQN_{}.txt'.format(name), (rewards, rewards_others, loss))
         print("Training details saved!")
 
     plt.show()
@@ -193,7 +198,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='training a recurrent q-network')
     parser.add_argument('--epochs', type=int, action='store',
-                        help='number of epoches to train', default=10)
+                        help='number of epoches to train', default=20)
     parser.add_argument('--mode', type=int, action='store',
                         help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
     parser.add_argument('--save_model', type=bool, action='store', help='save trained model or not', default=True)
