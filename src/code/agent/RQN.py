@@ -102,7 +102,7 @@ sess.run(tf.global_variables_initializer())
 
 
 def train_iteration(t_max, train=False):
-    #print(time.strftime("%H:%M:%S", time.localtime()))
+    print(time.strftime("%H:%M:%S", time.localtime()))
     total_reward = 0
     total_reward_others = 0
     td_loss = 0
@@ -209,7 +209,7 @@ if __name__ == "__main__":
     print(args)
 
     # initialize the environment
-    new_env = physic_env(cond, mass_list, force_list,
-                         init_mouse, T, args.mode, prior)
+    new_env = physic_env(train_cond, mass_list, force_list,
+                         init_mouse, T, args.mode, prior, reward_stop)
     # train
     train_loop(args)

@@ -16,9 +16,9 @@ SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
 
 # hyper-parameter
 T = 40
-TIMEOUT = 80
+TIMEOUT = 1440
 ig_mode = 1
-state_dim = T*8
+state_dim = T*16
 n_actions = 645
 nn_h1 = 150
 nn_h2 = 250
@@ -101,7 +101,7 @@ cond = {'sls':[{'x':0.26, 'y':2}, {'x':0.28, 'y':2}, {'x':1, 'y':0.26}, {'x':2, 
               [0, 0, 0, -3],
               [-3, 0, -3, 0]],
         'mass':[1,2,1,1],
-        'timeout': 1200 
+        'timeout': 1440 
     }
 
 # Functions for generating initial conditions

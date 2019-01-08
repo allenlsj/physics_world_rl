@@ -6,6 +6,7 @@ plot.py
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from pandas import ewma
 
 def plot(args):
     # if args.mode == 1:
@@ -38,8 +39,10 @@ def plot(args):
 
     plt.figure(1)
     plt.plot(RQN_mass_reward)
+    plt.plot(ewma(np.array(RQN_mass_reward), span=10))
     plt.plot(RQN_mass_reward_others)
-    plt.legend(['mass', 'force'], loc='best')
+    plt.plot(ewma(np.array(RQN_mass_reward_others), span=10))
+    plt.legend(['mass', 'mass ewma@10', 'force', 'force ewma@10'], loc='best')
     plt.ylabel("RQN Training Rewards (mass exploration)")
     plt.xlabel("Number of games")
     plt.title(name)
@@ -48,8 +51,10 @@ def plot(args):
 
     plt.figure(2)
     plt.plot(RQN_force_reward)
+    plt.plot(ewma(np.array(RQN_force_reward), span=10))
     plt.plot(RQN_force_reward_others)
-    plt.legend(['force', 'mass'], loc='best')
+    plt.plot(ewma(np.array(RQN_force_reward_others), span=10))
+    plt.legend(['force', 'force ewma@10', 'mass', 'mass ewma@10'], loc='best')
     plt.ylabel("RQN Training Rewards (force exploration)")
     plt.xlabel("Number of games")
     plt.title(name)
@@ -58,8 +63,10 @@ def plot(args):
 
     plt.figure(3)
     plt.plot(RQN_mass_loss)
+    plt.plot(ewma(np.array(RQN_mass_loss), span=10))
     plt.plot(RQN_force_loss)
-    plt.legend(['mass', 'force'], loc='best')
+    plt.plot(ewma(np.array(RQN_force_loss), span=10))
+    plt.legend(['mass', 'mass ewma@10', 'force', 'force ewma@10'], loc='best')
     plt.ylabel("RQN Loss")
     plt.xlabel("Number of games")
     plt.title(name)
