@@ -49,7 +49,7 @@ class q_agent:
     def get_action(self, s):
         epsilon = self.epsilon
         #q_values = self.nn.predict(np.array(s)[None])[0]
-        q_values =. self.get_q_values([s])
+        q_values = self.get_q_values([s])
 
         thre = np.random.rand()
         if thre < epsilon:
@@ -106,28 +106,31 @@ sess.run(tf.global_variables_initializer())
 def train_iteration(t_max, train=False):
     #print(time.strftime("%H:%M:%S", time.localtime()))
     total_reward = 0
+    total_reward_others = 0
     td_loss = 0
     s = new_env.reset()
 
     for t in range(t_max):
         a = agent.get_action(s)
-        s_next, r, is_done = new_env.step(a)
+        s_next, r, is_done, r_others = new_env.step(a)
 
         if train:
             _, loss_t = sess.run([train_step, train_agent.loss], {train_agent.s_ph: [s], train_agent.a_ph: [a], train_agent.r_ph: [
                      r], train_agent.s_next_ph: [s_next], train_agent.is_done_ph: [is_done]})
 
         total_reward += r
+        total_reward_others += r_others
         td_loss += loss_t
         s = s_next
         if is_done:
             break
 
-    return [total_reward, td_loss]
+    return [total_reward, total_reward_others * reward_stop, td_loss]
 
 
 def train_loop(args):
     rewards = []
+    rewards_others = []
     loss = []
     if args.mode == 1:
         name = 'mass'
@@ -139,53 +142,55 @@ def train_loop(args):
         results = [train_iteration(
             t_max=1000, train=True) for t in range(args.sessions)]
         epoch_rewards = [r[0] for r in results]
-        epoch_loss = [l[1] for l in results]
+        epoch_rewards_others = [r[1] for r in results]
+        epoch_loss = [l[2] for l in results]
         rewards += epoch_rewards
+        rewards_others += epoch_rewards_others
         loss += epoch_loss
-        print("epoch {}\t mean reward = {:.4f}\t mean loss = {:.4f}\t total reward = {:.4f}\t epsilon = {:.3f}".format(
-            i, np.mean(epoch_rewards), np.mean(epoch_loss), np.sum(rewards),agent.epsilon))
+        print("epoch {}\t mean reward = {:.4f}\t mean reward (others) = {:.4f}\t mean loss = {:.4f}\t total reward = {:.4f}\t epsilon = {:.3f}".format(
+            i, np.mean(epoch_rewards), np.mean(epoch_rewards_others), np.mean(epoch_loss), np.sum(rewards),agent.epsilon))
         # adjust agent parameters
         if i % 2 == 0:
             load_weigths_into_target_network(agent, target_network)
             agent.epsilon = max(agent.epsilon * epsilon_decay, 0.01)
 
-        plt.figure(1)
-        plt.plot(rewards)
-        plt.ylabel("Reward")
-        plt.xlabel("Number of iteration")
-        plt.title("MLP Q learning with target network (" + name + ")")
-        plt.pause(0.001)
-        fig = plt.gcf()
-        fig.savefig('Qagent_{}_reward.png'.format(name))
+        # plt.figure(1)
+        # plt.plot(rewards)
+        # plt.ylabel("Reward")
+        # plt.xlabel("Number of iteration")
+        # plt.title("MLP Q learning with target network (" + name + ")")
+        # plt.pause(0.001)
+        # fig = plt.gcf()
+        # fig.savefig('Qagent_{}_reward.png'.format(name))
 
-        plt.figure(2)
-        plt.plot(loss)
-        plt.ylabel("Loss")
-        plt.xlabel("Number of iteration")
-        plt.title("MLP Q learning with target network (" + name + ")")
-        plt.pause(0.001)
-        fig = plt.gcf()
-        fig.savefig('Qagent_{}_loss.png'.format(name))
+        # plt.figure(2)
+        # plt.plot(loss)
+        # plt.ylabel("Loss")
+        # plt.xlabel("Number of iteration")
+        # plt.title("MLP Q learning with target network (" + name + ")")
+        # plt.pause(0.001)
+        # fig = plt.gcf()
+        # fig.savefig('Qagent_{}_loss.png'.format(name))
 
-        plt.figure(3)
-        plt.plot(np.cumsum(rewards))
-        plt.ylabel("Cumulative Reward")
-        plt.xlabel("Number of iteration")
-        plt.title("MLP Q learning with target network (" + name + ")")
-        plt.pause(0.001)
-        fig = plt.gcf()
-        fig.savefig('Qagent_{}_cum_reward.png'.format(name))
+        # plt.figure(3)
+        # plt.plot(np.cumsum(rewards))
+        # plt.ylabel("Cumulative Reward")
+        # plt.xlabel("Number of iteration")
+        # plt.title("MLP Q learning with target network (" + name + ")")
+        # plt.pause(0.001)
+        # fig = plt.gcf()
+        # fig.savefig('Qagent_{}_cum_reward.png'.format(name))
 
     if args.save_model:
         model_json = agent.nn.to_json()
-        with open('Qagent_{}.json'.format(name), 'w') as json_file:
+        with open('MLP_{}.json'.format(name), 'w') as json_file:
             json_file.write(model_json)
-        agent.nn.save_weights('Qagent_{}.h5'.format(name))
+        agent.nn.save_weights('MLP_{}.h5'.format(name))
         print("Model saved!")
-        np.savetxt('Qagent_{}.txt'.format(name), (rewards, loss, np.cumsum(rewards).tolist()))
+        np.savetxt('MLP_{}.txt'.format(name), (rewards, rewards_others, loss))
         print("Training details saved!")
 
-    plt.show()
+    #plt.show()
 
     return
 
@@ -197,15 +202,15 @@ if __name__ == "__main__":
                         help='number of epoches to train', default=10)
     parser.add_argument('--mode', type=int, action='store',
                         help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
-    parser.add_argument('--save_model', type=bool, action='store', help='save trained model or not', default=True)
+    parser.add_argument('--save_model', type=bool, action='store', help='save trained model or not', default=False)
     parser.add_argument('--sessions', type=int, action='store',
-                        help='number of sessions to train per epoch', default=10)
+                        help='number of sessions to train per epoch', default=5)
 
     args = parser.parse_args()
     print(args)
 
     # initialize the environment
-    new_env = physic_env(cond, mass_list, force_list,
-                         init_mouse, T, args.mode, prior)
+    new_env = physic_env(train_cond, mass_list, force_list,
+                         init_mouse, T, args.mode, prior, reward_stop)
     # train
     train_loop(args)

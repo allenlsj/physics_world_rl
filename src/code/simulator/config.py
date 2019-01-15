@@ -16,7 +16,7 @@ SIGMA = np.array([[0.2758276,0],[0,0.6542066]])
 
 # hyper-parameter
 T = 40
-TIMEOUT = 1440
+TIMEOUT = 960
 ig_mode = 1
 state_dim = T*16
 n_actions = 645
@@ -24,7 +24,7 @@ nn_h1 = 150
 nn_h2 = 250
 nn_h3 = 450
 epsilon = 0.5
-epsilon_decay = 0.9
+epsilon_decay = 0.95
 qlearning_gamma = 0.99 
 init_mouse = (0,0)
 reward_stop = 0.95
@@ -67,12 +67,10 @@ def generate_possible(level,length):
 
 
 # 2**2*2**6 = 2**8
-# mass_list = [[1,1,1,1], [1,2,1,1], [1,2,3,1], [3,1,1,2]]
-# #mass_list = [[1,1,1,1], [1,2,1,1]]
+#mass_list = [[1,1,1,1], [1,2,1,1], [1,2,3,1], [3,1,1,2]]
+# mass_list = [[1,1,1,1], [1,2,1,1]]
 # force_possible =generate_possible(2,6)
 # force_list = generate_force(force_possible)
-
-
 
 
 # 2**5*2**5 = 2**10

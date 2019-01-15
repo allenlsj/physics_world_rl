@@ -125,7 +125,7 @@ def train_iteration(t_max, train=False):
         if is_done:
             break
 
-    return [total_reward, total_reward_others, td_loss]
+    return [total_reward, total_reward_others * reward_stop, td_loss]
 
 
 def train_loop(args):
@@ -150,7 +150,7 @@ def train_loop(args):
         print("epoch {}\t mean reward = {:.4f}\t mean reward (others) = {:.4f}\t mean loss = {:.4f}\t total reward = {:.4f}\t epsilon = {:.4f}".format(
             i, np.mean(epoch_rewards), np.mean(epoch_rewards_others), np.mean(epoch_loss), np.sum(rewards),agent.epsilon))
         # adjust agent parameters
-        if i % 1 == 0:
+        if i % 2 == 0:
             load_weigths_into_target_network(agent, target_network)
             agent.epsilon = max(agent.epsilon * epsilon_decay, 0.01)
 
@@ -190,7 +190,7 @@ def train_loop(args):
         np.savetxt('RQN_{}.txt'.format(name), (rewards, rewards_others, loss))
         print("Training details saved!")
 
-    plt.show()
+    #plt.show()
 
     return
 
@@ -198,7 +198,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='training a recurrent q-network')
     parser.add_argument('--epochs', type=int, action='store',
-                        help='number of epoches to train', default=20)
+                        help='number of epoches to train', default=100)
     parser.add_argument('--mode', type=int, action='store',
                         help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
     parser.add_argument('--save_model', type=bool, action='store', help='save trained model or not', default=True)

@@ -37,10 +37,12 @@ class physic_env():
         self.prior = copy.deepcopy(prior)
         self.PRIOR = copy.deepcopy(prior)
         self.reward_stop = reward_stop
-        if ig_mode == 1:
+        if self.ig_mode == 1:
             self.total_reward = entropy(marginalize_prior(prior, 0))
-        elif ig_mode == 2:
+            print("Total reward per game:{}".format(self.total_reward))
+        elif self.ig_mode == 2:
             self.total_reward = entropy(marginalize_prior(prior, 1))
+            print("Total reward per game:{}".format(self.total_reward))
         self.step_reward = []
         #self.simulate_state_dic = {}
         #self.true_state_dic = {}
@@ -251,10 +253,10 @@ class physic_env():
         simulate_trace, _ = generate_trajectory(simulate_data,False)
         
         other_mode = 3 - self.ig_mode
-        reward_others, _ = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, other_mode)
-        reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode)
+        reward_others, _ = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, other_mode, update_prior=False)
+        reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode, update_prior=True)
         self.step_reward.append(reward)
-        print("step reward: ", len(self.step_reward), np.sum(self.step_reward))
+        #print("step reward: ", len(self.step_reward), np.sum(self.step_reward))
         current_time = len(self.data['o1']['x']) - 1
         if(current_time >= self.cond['timeout'] or np.sum(self.step_reward)>self.total_reward * self.reward_stop):
             #print(current_time)
@@ -262,5 +264,6 @@ class physic_env():
         else:
             stop_flag = False
         return states, reward, stop_flag, reward_others
+
     def step_data(self):
         return self.data

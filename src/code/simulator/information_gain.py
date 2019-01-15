@@ -9,6 +9,7 @@ import numpy as np
 from config import *
 from utility import gaussian
 from scipy.stats import entropy
+import copy
 
 #--- Set functions ---
 def softmax(x):
@@ -21,10 +22,12 @@ def weighted_sum(x):
 
 def marginalize_prior(prior, axis):
     prior_marg = []
+    # marginalize over mass
     if axis == 0:
         prior_marg = [
             np.sum([prior[j] for j in prior if tuple(i) == j[0]]) for i in mass_list]
 
+    # marginalize over force
     elif axis == 1:
         prior_marg = [np.sum([prior[j] for j in prior if tuple(
             np.array(i).flatten()) == j[1]]) for i in force_list]
@@ -82,17 +85,19 @@ def marginalize_posterior(true_dict, est_dict, Sigma, prior, mode):
         return weighted_sum(posterior_marg), posterior
 
 
-def get_reward_ig(true_dict, est_dict, Sigma, prior, mode=1):
+def get_reward_ig(true_dict, est_dict, Sigma, prior, mode=1, update_prior=True):
     if mode == 1:
         posterior_mass,posterior = marginalize_posterior(true_dict, est_dict, Sigma, prior, 'mass')
         posterior_ent_mass = entropy(posterior_mass)
         prior_ent_mass = entropy(marginalize_prior(prior, 0))
         
         # update prior
-        new_prior = weighted_sum(posterior)
-        for index, mass in enumerate(mass_list):
-            for index2, force in enumerate(force_list):
-                prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
+        #prior_ = copy.deepcopy(prior)
+        if update_prior:
+            new_prior = weighted_sum(posterior)
+            for index, mass in enumerate(mass_list):
+                for index2, force in enumerate(force_list):
+                    prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
 
         return prior_ent_mass - posterior_ent_mass, prior
 
@@ -102,11 +107,13 @@ def get_reward_ig(true_dict, est_dict, Sigma, prior, mode=1):
         prior_ent_force = entropy(marginalize_prior(prior, 1))
         
         # update prior
-        new_prior = weighted_sum(posterior)
-        for index, force in enumerate(force_list):
-            for index2, mass in enumerate(mass_list):
-                prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
-        
+        #prior_ = copy.deepcopy(prior)
+        if update_prior:
+            new_prior = weighted_sum(posterior)
+            for index, force in enumerate(force_list):
+                for index2, mass in enumerate(mass_list):
+                    prior[tuple(mass), tuple(np.array(force).flatten())] = new_prior[index][index2]
+
         return prior_ent_force - posterior_ent_force, prior
 
     else:
