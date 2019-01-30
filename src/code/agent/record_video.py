@@ -15,20 +15,27 @@ from functools import partial
 import math
 import gizeh as gz
 import moviepy.editor as mpy
+import json
 
-num_feats = 8
+num_feats = 16
 
 def get_action(nn, s):
     q_values = nn.predict(np.array(s)[None])[0]
     action = np.argmax(q_values)
 
+    # thre = np.random.rand()
+    # if thre < 0.8:
+    #     action = np.random.choice(n_actions, 1)[0]
+    # else:
+    #     action = np.argmax(q_values)
+
     return action
 
 def test(args, env):
     if args.mode == 1:
-        name = 'MASS'
+        name = 'mass'
     else:
-        name = 'FORCE'
+        name = 'force'
 
     with open(args.model_json, 'rb') as json_file:
         lmodel_json = json_file.read()
@@ -37,36 +44,47 @@ def test(args, env):
     print("Model loaded!")
     
     rewards = []
+    rewards_other = []
     s = env.reset()
     if args.RQN:
         s = np.transpose(np.array(s).reshape(num_feats/2,T,2),[0,2,1]).flatten().reshape(num_feats, T).T
 
     for t in range(1000):
         a = get_action(model, s)
-        s_next, r, is_done = env.step(a)
+        s_next, r, is_done, r_ = env.step(a)
         if args.RQN:
             s_next = np.transpose(np.array(s_next).reshape(num_feats/2,T,2),[0,2,1]).flatten().reshape(num_feats, T).T
 
         rewards += [r]
+        rewards_other += [r_]
         s = s_next
         if is_done:
             break
 
-    plt.plot(rewards)
-    plt.ylabel("Reward")
-    plt.xlabel("Number of actions")
-    plt.title("Total rewards of the {} exploration game via RQN is: {:.3f}".format(name, np.sum(rewards)))
-    fig = plt.gcf()
-    fig.savefig('eval_{}.png'.format(name))
+    report = {}
+    report['target reward'] = np.sum(rewards)
+    report['mismatched reward'] = np.sum(rewards_other)
+    with open('test_reward_{}_{}.json'.format(name, args.game), 'w') as fp:
+        json.dump(report, fp)
 
-    plt.show()
+    with open('test_data_{}_{}.json'.format(name, args.game), 'w') as fp:
+        json.dump(env.step_data(), fp)
+
+    # plt.plot(rewards)
+    # plt.ylabel("Reward")
+    # plt.xlabel("Number of actions")
+    # plt.title("Total rewards of the {} exploration game via RQN is: {:.3f}".format(name, np.sum(rewards)))
+    # fig = plt.gcf()
+    # fig.savefig('eval_{}.png'.format(name))
+
+    # plt.show()
 
     return env.step_data()
 
 def make_frame(this_data, t):
-    labels = ['A','B','','']
+    labels = ['A','B','C','D']
     centers = np.array(['o1','o2','o3','o4'])
-    colors = [(1,0,0),(0,1,0),(0,0,1),(0,0,1)]
+    colors = [(0.97,0.46,0.44),(0.48,0.68,0),(0,0.75,0.75),(0.78,0.48,1)]
     RATIO = 100
     RAD = 25
     W = 600
@@ -130,6 +148,7 @@ def make_frame(this_data, t):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='recording test video')
+    parser.add_argument('--game', type=int, action='store', help='games order', default=1)
     parser.add_argument('--mode', type=int, action='store', help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
     parser.add_argument('--model_json', type=str, action='store', help='trained model structure to load', default='RQN_mass.json')
     parser.add_argument('--model_weights', type=str, action='store', help='trained model weights to load', default='RQN_mass.h5')
@@ -137,14 +156,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     print(args)
+    if args.mode == 1:
+        name = 'mass'
+    else:
+        name = 'force'
 
     # initialize the environment
-    new_env = physic_env(cond, mass_list, force_list, init_mouse, T, args.mode, prior)
+    new_env = physic_env(test_cond, mass_list, force_list, init_mouse, T, args.mode, prior, reward_stop)
 
     data_ = test(args, new_env)
 
     frame = partial(make_frame, data_)
     duration = len(data_['co'])/60
     clip = mpy.VideoClip(frame, duration=duration)
-    writename = 'RQN_{}.mp4'.format(args.mode)
+    writename = 'test_{}_{}.mp4'.format(name, args.game)
     clip.write_videofile(writename, fps=24)

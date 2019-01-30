@@ -11,6 +11,7 @@ from config import *
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import model_from_json
+import json
 
 num_feats = 16
 
@@ -18,6 +19,12 @@ num_feats = 16
 def get_action(nn, s):
     q_values = nn.predict(np.array(s)[None])[0]
     action = np.argmax(q_values)
+
+    # thre = np.random.rand()
+    # if thre < 0.75:
+    #     action = np.random.choice(n_actions, 1)[0]
+    # else:
+    #     action = np.argmax(q_values)
 
     return action
 
@@ -54,16 +61,19 @@ def test_loop(args, env):
             if is_done:
                 break
 
-        cum_rewards += np.cumsum(rewards).tolist()
-        # plt.plot(np.cumsum(rewards))
-        # plt.ylabel('Cumulative rewards')
-        # plt.xlabel("Number of steps")
-        # plt.title("RQN test({})".format(name))
+        cum_rewards.append(np.cumsum(rewards).tolist())
+        #np.savetxt('Test_data_{}.txt'.format(name), env.step_data())
+        with open('data_test.json', 'w') as fp:
+            json.dump(env.step_data(), fp)
+        plt.plot(np.cumsum(rewards))
+        plt.ylabel('Cumulative rewards')
+        plt.xlabel("Number of steps")
+        plt.title("RQN test({})".format(name))
         #plt.pause(0.001)
-    # fig = plt.gcf()
-    # fig.savefig('test_{}.png'.format(name))
-    np.savetxt('test_{}.txt'.format(name), cum_rewards)
-    # plt.show()
+    fig = plt.gcf()
+    fig.savefig('test_{}.png'.format(name))
+    np.savetxt('Test_{}.txt'.format(name), cum_rewards)
+    plt.show()
 
     return
 
@@ -71,7 +81,7 @@ def test_loop(args, env):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='recording test video')
     parser.add_argument('--epochs', type=int, action='store',
-                        help='number of games to test', default=20)
+                        help='number of games to test', default=1)
     parser.add_argument('--mode', type=int, action='store',
                         help='type of intrinsic reward, 1 for mass, 2 for force', default=1)
     parser.add_argument('--model_json', type=str, action='store',
