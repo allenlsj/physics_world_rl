@@ -263,7 +263,7 @@ def generate_action(m_x, m_y, index, beta=1.0, T=15):
                 y = [-i for i in y]
             elif dir_ == 3:
                 x = -x
-            elif dir_ == 4:
+            elif dir_ == 1:
                 x = -x
                 y = [-i for i in y]
         x = x.tolist()
