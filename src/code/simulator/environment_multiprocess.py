@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-environment_mpi.py
+agent.py
 """
 
 # IMPORT LIBRARIES
@@ -211,11 +211,11 @@ class basic_env(object):
         return states
 
     def step(self, control_vec, sub_config_list):
-        
+
         # current_cond = self.update_condition(self.cond['mass'],self.cond['lf'])
         # don't need update bodies here, since we initialize this engine with true cond
         # self.update_bodies(current_cond)
-        current_cond = self.condition
+        current_cond = self.cond
         # simulate case
         simulate_data = {}
         for (m,f) in sub_config_list:
@@ -227,6 +227,25 @@ class basic_env(object):
         simulate_trace, _ = generate_trajectory(simulate_data,False)
         return simulate_trace
 
+
+def parallel(input_params):
+    # instantiate the basic environment by current_cond
+    # step with selected control_vec and allocated sub_config_list
+    # return subsimulate_trace in dict format
+    # print("h1")
+    sub_config_list,current_cond,control_vec,init_mouse,time_stamp=input_params
+    subengine = basic_env([current_cond],init_mouse,time_stamp)
+    subsimulate_trace = subengine.step(control_vec,sub_config_list)
+    return subsimulate_trace
+
+def parallel(input_params,sub_config_list):
+    # instantiate the basic environment by current_cond
+    # step with selected control_vec and allocated sub_config_list
+    # return subsimulate_trace in dict format
+    current_cond,control_vec,init_mouse,time_stamp=input_params
+    subengine = basic_env([current_cond],init_mouse,time_stamp)
+    subsimulate_trace = subengine.step(control_vec,sub_config_list)
+    return subsimulate_trace
 class physic_env(basic_env):
     def __init__(self, cond, init_mouse, time_stamp, mass_list, force_list, ig_mode, prior,reward_stop):
         # --- inherit from basic_env ---
@@ -261,7 +280,7 @@ class physic_env(basic_env):
         self.step_reward = []
         return states
 
-    def step(self, action_idx):
+    def step(self, action_idx, test_flag=False):
         # overwrite reset method
         obj, mouse_x, mouse_y = generate_action(
             self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx, T = self.T)
@@ -285,23 +304,17 @@ class physic_env(basic_env):
                 config_list.append((m,f))
 
         config_list_chunks=[]
-        n_proc=64
+        n_proc=4
         chunk_size=1024/n_proc
         for i in range(n_proc):
+            # param_tuple = (config_list[i*chunk_size:(i+1)*chunk_size],
+            # current_cond,control_vec,self.init_mouse,self.T)
             config_list_chunks.append(config_list[i*chunk_size:(i+1)*chunk_size])
 
-        def parallel(sub_config_list,current_cond,control_vec,init_mouse,time_stamp):
-            # instantiate the basic environment by current_cond
-            # step with selected control_vec and allocated sub_config_list
-            # return subsimulate_trace in dict format
-            print("h1")
-            subengine = basic_env([current_cond],(0,0),40)
-            subsimulate_trace = subengine.step(control_vec,sub_config_list)
-            return subsimulate_trace
-
         p = Pool(n_proc)
-        parallel_x = partial(parallel,current_cond=current_cond,control_vec=control_vec,init_mouse=self.init_mouse,time_stamp=self.T)
-        results = p.map(parallel_x, config_list_chunks)
+        params = (current_cond,control_vec,self.init_mouse,self.T)
+        results = p.map(partial(parallel,params),config_list_chunks)
+        #results = p.map(parallel, config_list_chunks)
 
         simulate_trace = {}
         for subres in results:
@@ -314,20 +327,19 @@ class physic_env(basic_env):
         #print("after update",self.data['o1']['x'])
         #print("******************")
         true_trace, states = generate_trajectory(true_data,True)
-
-        other_mode = 3 - self.ig_mode
-        print("s reward")
-        reward_others, _ = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, other_mode, update_prior=False)
-        reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode, update_prior=True)
-        self.step_reward.append(reward)
-        #print("step reward: ", len(self.step_reward), np.sum(self.step_reward))
-        current_time = len(self.data['o1']['x']) - 1
-        if(current_time >= self.cond['timeout'] or np.sum(self.step_reward)>self.total_reward * self.reward_stop):
-            #print(current_time)
-            stop_flag = True
-        else:
-            stop_flag = False
-        return states, reward, stop_flag, reward_others
+        if(not test_flag):
+            other_mode = 3 - self.ig_mode
+            reward_others, _ = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, other_mode, update_prior=False)
+            reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode, update_prior=True)
+            self.step_reward.append(reward)
+            #print("step reward: ", len(self.step_reward), np.sum(self.step_reward))
+            current_time = len(self.data['o1']['x']) - 1
+            if(current_time >= self.cond['timeout'] or np.sum(self.step_reward)>self.total_reward * self.reward_stop):
+                #print(current_time)
+                stop_flag = True
+            else:
+                stop_flag = False
+            return states, reward, stop_flag, reward_others
 
     def step_data(self):
         return self.data
