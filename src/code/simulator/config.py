@@ -6,6 +6,8 @@ config.py
 import numpy as np
 import os
 import json
+from itertools import product
+
 # --- Set constants ---
 TARGET_FPS = 60
 TIME_STEP = 1.0 / TARGET_FPS
@@ -83,6 +85,14 @@ force_all_possible =generate_possible(3,6)
 force_possible = [force_all_possible[i] for i in np.random.choice(729,32,replace= False)]
 force_list = generate_force(force_possible)
 
+# build hash map from idx to the combination of mass and force
+HASHKEY={}
+for i,x in enumerate(product(*[mass_list,force_list])):
+    HASHKEY[i] = (tuple(x[0]),tuple(x[1].flatten()))
+
+BACKHASH = {}
+for key in HASHKEY:
+    BACKHASH[HASHKEY[key]] = key
 
 # --- SET INITIAL PRIOR --- 
 prior = dict()
@@ -131,4 +141,4 @@ def load_cond(file_name, size):
     return cond_list
 train_cond = load_cond("train_cond"+str(TIMEOUT)+".json",60)
 test_cond = load_cond("test_cond"+str(TIMEOUT)+".json",20)
-print("timeout",train_cond[0]['timeout'])
+#print("timeout",train_cond[0]['timeout'])

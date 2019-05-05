@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-environment_mpi.py
+environment_mpi4py.py
+build environment for multiprocess with MPI
 """
 
 # IMPORT LIBRARIES
@@ -13,7 +14,7 @@ from Box2D.b2 import (world, polygonShape, staticBody, dynamicBody, vec2)
 from config import *
 from utility import gaussian, store_state ,generate_trajectory
 from action_generator import generate_action
-from information_gain import *
+from information_gain_pool_mpi import *
 import time
 from multiprocessing import Pool
 from functools import partial
@@ -211,28 +212,38 @@ class basic_env(object):
         return states
 
     def step(self, control_vec, sub_config_list):
-        
+
         # current_cond = self.update_condition(self.cond['mass'],self.cond['lf'])
         # don't need update bodies here, since we initialize this engine with true cond
         # self.update_bodies(current_cond)
-        current_cond = self.condition
+        current_cond = self.cond
         # simulate case
         simulate_data = {}
-        for (m,f) in sub_config_list:
-            current_cond['mass'] = m
-            current_cond['lf'] = f
-            self.update_bodies(current_cond)
-            key = (tuple(m), tuple(np.array(f).flatten()))
-            simulate_data[key] = self.simulate_in_all(current_cond,control_vec)
-        simulate_trace, _ = generate_trajectory(simulate_data,False)
+        (m,f)= sub_config_list
+        current_cond['mass'] = m
+        current_cond['lf'] = f
+        self.update_bodies(current_cond)
+        simulate_data = self.simulate_in_all(current_cond,control_vec)
+        dict_r_theta = {}
+        for obj in ['o1', 'o2', 'o3', 'o4']:
+            vx = np.array(simulate_data[obj]['vx'])
+            vy = np.array(simulate_data[obj]['vy'])
+            x = np.array(simulate_data[obj]['x'])
+            y = np.array(simulate_data[obj]['y'])
+            r = np.sqrt(vx**2+vy**2)
+            theta = np.arctan2(vy,vx)
+            theta[theta<0] += 2 * np.pi
+            dict_r_theta[obj] = {'r':list(r),'rotation':list(theta)}
+
+        key = (tuple(m), tuple(np.array(f).flatten()))
+        simulate_trace = {key:dict_r_theta}
         return simulate_trace
 
 class physic_env(basic_env):
-    def __init__(self, cond, init_mouse, time_stamp, mass_list, force_list, ig_mode, prior,reward_stop):
+    def __init__(self, cond, init_mouse, time_stamp, key_list, ig_mode=0, prior=None,reward_stop=None):
         # --- inherit from basic_env ---
         super(physic_env,self).__init__(cond, init_mouse, time_stamp)
-        self.mass_list = mass_list
-        self.force_list = force_list
+        self.key_list = key_list
 
         self.ig_mode = ig_mode
         self.prior = copy.deepcopy(prior)
@@ -261,64 +272,56 @@ class physic_env(basic_env):
         self.step_reward = []
         return states
 
-    def step(self, action_idx):
+    def step(self, action_idx, current_cond,true_case):
         # overwrite reset method
+        # generate action
+        # TODO Is it better to generate action for each process or scatter generated action instead of action idx for each process
         obj, mouse_x, mouse_y = generate_action(
             self.data['mouse']['x'][-1], self.data['mouse']['y'][-1], action_idx, T = self.T)
         control_vec = {'obj': np.repeat(
             obj, self.T), 'x': np.array(mouse_x), 'y': np.array(mouse_y)}
-        current_cond = self.update_condition(self.cond['mass'],self.cond['lf'])
+        # update condition for keeping up with true trace
+        # scattered current_cond is updated with true trace and mass and force, so no need update here
+
         # true case
-        true_key = (tuple(self.cond['mass']), tuple(np.array(self.cond['lf']).flatten()))
-        self.update_bodies(current_cond)
-        true_data = {true_key: self.simulate_in_all(current_cond, control_vec)}
+        if(true_case):
+            print("true case in main process")
+            if(not current_cond):
+                # for the first time, generate current_cond by itself
+                current_cond = self.update_condition(self.cond['mass'],self.cond['lf'])
+            self.update_bodies(current_cond)
+            # store the true trajectory with the key of -1, which is not included in [0,1024]
+            true_data = {-1: self.simulate_in_all(current_cond, control_vec)}
+            # Synchronize self.data to keep track of all steps from beginning to end
+            self.update_data(true_data[-1],control_vec)
+            # store all true result inside the class of the main process
+            self.true_trace, self.states = generate_trajectory(true_data,True)
+            # update condition with true trace(by self.data) and true mass and force
+            current_cond = self.update_condition(self.cond['mass'],self.cond['lf'])
+            return current_cond
         # simulate case
-        simulate_data = {}
+        else:
+            print("simulate case begin in this process")
+            #print("*******",current_cond['mass'],current_cond['lf'])
+            simulate_data = {}
+            for key in self.key_list:
+                (m,f) = HASHKEY[key]
+                current_cond['mass'] = m
+                current_cond['lf'] = np.array(f).reshape(4,4)
+                # updated with last true location and velocity
+                # updated with current simulated mass and force
+                self.update_bodies(current_cond)
+                simulate_data[key] = self.simulate_in_all(current_cond,control_vec)
+            simulate_trace, _ = generate_trajectory(simulate_data,False)
+            print("simulate case end in this process")
+            return simulate_trace
 
-        ############################################################
-        # MULTIPROCESSING
-        ## TODO:
-
-        config_list=[]
-        for m in self.mass_list:
-            for f in self.force_list:
-                config_list.append((m,f))
-
-        config_list_chunks=[]
-        n_proc=64
-        chunk_size=1024/n_proc
-        for i in range(n_proc):
-            config_list_chunks.append(config_list[i*chunk_size:(i+1)*chunk_size])
-
-        def parallel(sub_config_list,current_cond,control_vec,init_mouse,time_stamp):
-            # instantiate the basic environment by current_cond
-            # step with selected control_vec and allocated sub_config_list
-            # return subsimulate_trace in dict format
-            print("h1")
-            subengine = basic_env([current_cond],(0,0),40)
-            subsimulate_trace = subengine.step(control_vec,sub_config_list)
-            return subsimulate_trace
-
-        p = Pool(n_proc)
-        parallel_x = partial(parallel,current_cond=current_cond,control_vec=control_vec,init_mouse=self.init_mouse,time_stamp=self.T)
-        results = p.map(parallel_x, config_list_chunks)
-
-        simulate_trace = {}
-        for subres in results:
-            simulate_trace.update(subres)
-        ############################################################
-        # Synchronize self.data to keep track of all steps from beginning to end
-        #print("before update",self.data['o1']['x'])
-        #print("update",true_data[true_key]['o1']['x'])
-        self.update_data(true_data[true_key],control_vec)
-        #print("after update",self.data['o1']['x'])
-        #print("******************")
-        true_trace, states = generate_trajectory(true_data,True)
-
+    def game_step(self,simulate_trace):
+        # calculate reward
+        # return states and reward
         other_mode = 3 - self.ig_mode
-        print("s reward")
-        reward_others, _ = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, other_mode, update_prior=False)
-        reward, self.prior = get_reward_ig(true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode, update_prior=True)
+        reward_others, _ = get_reward_ig(self.true_trace, simulate_trace, SIGMA, self.prior, other_mode, update_prior=False)
+        reward, self.prior = get_reward_ig(self.true_trace, simulate_trace, SIGMA, self.prior, self.ig_mode, update_prior=True)
         self.step_reward.append(reward)
         #print("step reward: ", len(self.step_reward), np.sum(self.step_reward))
         current_time = len(self.data['o1']['x']) - 1
@@ -327,7 +330,7 @@ class physic_env(basic_env):
             stop_flag = True
         else:
             stop_flag = False
-        return states, reward, stop_flag, reward_others
+        return self.states, reward, stop_flag, reward_others
 
     def step_data(self):
         return self.data
