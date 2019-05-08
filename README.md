@@ -1,7 +1,7 @@
 # Physics_World_RL
-Training RL algorithms for active physical inference
-
 Humans exhibited rich and informative strategies that selectively revealed objects' properties of interest while minimizing causal "noise". We would like to explore how a variety of artificial agents solve this task, and what components are required to achieve human levels of performance, and whether similar or different strategies emerge.
+
+For parallelized version (faster simulation), please switch to the 'simulator-opt' branch.
 
 ### Dependencies
 * **Python 2.7**
