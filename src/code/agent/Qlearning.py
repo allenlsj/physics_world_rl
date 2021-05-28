@@ -77,7 +77,7 @@ def train_iteration(t_max, epsilon, train=False):
 
     for t in range(t_max):
         a = get_action(s, epsilon)
-        s_next, r, is_done = new_env.step(a)
+        s_next, r, is_done, r_others = new_env.step(a)
         #print(r)
 
         if train:
@@ -162,6 +162,6 @@ if __name__ == "__main__":
     print(args)
 
     # initialize the environment
-    new_env = physic_env(cond, mass_list, force_list, init_mouse, T, args.mode, prior)
+    new_env = physic_env(train_cond, mass_list, force_list, init_mouse, T, args.mode, prior, reward_stop)
     # train
     train_loop(args)
